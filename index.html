@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendCount - Your Personal Expense Tracker</title>
+    
+    <!-- PWA & Icon Links -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- UPDATED: Removed placeholders, using your logo file now -->
+    <link rel="icon" href="/icon-192.png">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Times+New+Roman&display=swap" rel="stylesheet">
+    
+    <!-- NOTE: All Firebase SDKs have been removed -->
+
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow-x: hidden;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #6D4C41;
+            background-color: #f0f2f5;
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(188, 170, 164, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(216, 201, 195, 0.15) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+        h1, h2, h3 {
+            font-family: 'Times New Roman', Times, serif;
+            color: #4E342E;
+            font-weight: 700;
+        }
+        .subtitle {
+            font-family: Arial, sans-serif;
+            font-weight: 600;
+        }
+        .card-style {
+            background: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.05);
+        }
+        .btn-primary {
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            transform: scale(1);
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+        }
+        .input-style {
+            width: 100%;
+            background-color: #f9fafb;
+            color: #1f2937;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+        .input-style::placeholder {
+            color: #6b7280;
+        }
+        .input-style:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #92400e;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #92400e; /* Matching theme color */
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #category-limits-modal.hidden, #camera-modal.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-sm space-y-3"></div>
+
+    <div id="loading-spinner" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-[101] transition-opacity duration-300">
+        <svg class="animate-spin h-10 w-10 text-amber-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
+    
+    <!-- NOTE: The Login Screen and User Profile sections have been removed -->
+
+    <div id="months-screen" class="hidden max-w-4xl mx-auto p-4 md:p-8 pt-20">
+        <header class="text-center mb-8">
+             <h1 class="text-4xl tracking-wider">My Expense Months</h1>
+             <p class="text-lg text-gray-600 mt-2 subtitle">Select a folder or jump to any month to add expenses.</p>
+             <form id="jump-to-month-form" class="mt-6 max-w-sm mx-auto flex items-center gap-2">
+                 <input type="month" class="input-style" required>
+                 <button type="submit" class="bg-amber-800 hover:bg-amber-900 text-white btn-primary py-2 px-6 flex-shrink-0">Go</button>
+             </form>
+          </header>
+          <div id="month-folders-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+    </div>
+
+    <div id="app-screen" class="hidden max-w-7xl mx-auto p-4 md:p-8 pt-20">
+        <header class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-amber-800 rounded-full flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wallet-cards"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="M15 3v18"/><path d="M8 12h.01"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-3xl tracking-wider">SpendCount</h1>
+                    <p class="text-xs text-amber-800/90 subtitle italic font-semibold">Don't just pay, Track It.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="back-to-months-btn" class="p-2 text-gray-600 hover:text-amber-800 transition-colors" title="Back to Months">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <div class="flex items-center gap-2">
+                    <label for="month-selector" class="font-bold subtitle text-gray-600">Viewing:</label>
+                    <input type="month" id="month-selector" class="input-style">
+                </div>
+            </div>
+        </header>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+            <div class="card-style rounded-xl p-6">
+                <h2 class="text-sm tracking-wide font-semibold text-gray-500 mb-2 subtitle"><span class="font-bold text-amber-800">* </span>TOTAL BUDGET (₹)</h2>
+                <p id="total-budget" class="text-3xl font-bold text-amber-900">₹0.00</p>
+            </div>
+            <div class="card-style rounded-xl p-6">
+                <h2 class="text-sm tracking-wide font-semibold text-gray-500 mb-2 subtitle"><span class="font-bold text-amber-800">* </span>SPENT (₹)</h2>
+                <p id="total-spent" class="text-3xl font-bold text-red-600">₹0.00</p>
+            </div>
+            <div class="card-style rounded-xl p-6">
+                <h2 class="text-sm tracking-wide font-semibold text-gray-500 mb-2 subtitle"><span class="font-bold text-amber-800">* </span>REMAINING (₹)</h2>
+                <p id="remaining-budget" class="text-3xl font-bold text-green-600">₹0.00</p>
+            </div>
+        </div>
+
+        <div class="card-style rounded-xl p-6 mb-8">
+            <h3 id="chart-title" class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Category Spending</h3>
+            <div class="relative h-64 md:h-80">
+                <canvas id="expense-chart"></canvas>
+            </div>
+        </div>
+
+         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="card-style rounded-xl p-6">
+                <h3 class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Monthly Budget</h3>
+                 <form id="budget-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <input type="text" id="budget-name" placeholder="Source name (e.g., Salary)" class="input-style sm:col-span-2" required>
+                     <input type="number" id="budget-amount" placeholder="Amount (₹)" class="input-style" required>
+                     <select id="budget-type" class="input-style">
+                         <option value="income">Income</option>
+                         <option value="debt">Debt</option>
+                         <option value="loan">Loan</option>
+                         <option value="savings">Savings</option>
+                     </select>
+                     <button type="submit" class="sm:col-span-2 w-full bg-blue-700 hover:bg-blue-800 text-white btn-primary py-2 px-6">Add Budget</button>
+                 </form>
+                 <div id="budget-list" class="space-y-2 max-h-40 overflow-y-auto no-scrollbar mt-4"></div>
+            </div>
+             <div class="card-style rounded-xl p-6">
+                <h3 class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Category Spending Limits</h3>
+                <p class="text-gray-600 mb-4">Set spending limits for each category to get alerts when you're about to go over.</p>
+                <button id="set-category-limits-btn" class="bg-purple-700 hover:bg-purple-800 text-white btn-primary py-2 px-6">Set Category Limits</button>
+                <div id="limit-exceeded-list" class="mt-4 space-y-2"></div>
+            </div>
+        </div>
+
+        <div class="card-style rounded-xl p-6 mb-8">
+             <h3 class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Add New Expense</h3>
+             <form id="expense-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <input type="text" id="expense-name" placeholder="Expense name" class="input-style sm:col-span-2 lg:col-span-4" required>
+                 <input type="number" id="expense-amount" placeholder="Amount (₹)" class="input-style" required>
+                 
+                 <!-- NEW: Category Suggester Button -->
+                 <div class="flex items-center gap-2">
+                    <select id="expense-category" class="input-style w-full" required></select>
+                    <button type="button" id="suggest-category-btn" class="p-2 bg-gray-200 hover:bg-gray-300 rounded-lg flex-shrink-0" title="Suggest Category">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-800"><path d="m12 8 2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5z"/><path d="M20 3h-2"/><path d="M22 5v-2"/><path d="m2.5 15.5 1.5 1.5"/><path d="M20 21h2"/><path d="M22 19v2"/><path d="m15.5 2.5 1.5-1.5"/><path d="m4 3h2"/><path d="M2 5V3"/><path d="M4 21H2"/><path d="M2 19v-2"/></svg>
+                    </button>
+                 </div>
+                 
+                 <input type="date" id="expense-date" class="input-style" required>
+                 <div class="grid grid-cols-3 gap-2">
+                      <select id="expense-hour" class="input-style" required></select>
+                      <select id="expense-minute" class="input-style" required></select>
+                      <select id="expense-ampm" class="input-style" required>
+                          <option value="AM">AM</option>
+                          <option value="PM">PM</option>
+                      </select>
+                 </div>
+                 <button type="submit" class="sm:col-span-2 lg:col-span-4 w-full bg-green-700 hover:bg-green-800 text-white btn-primary py-2 px-6">Save Expense</button>
+             </form>
+        </div>
+        
+        <div class="card-style rounded-xl p-6 mb-8">
+             <div class="flex items-center gap-3 mb-4">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-800"><path d="m12 8 2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5z"/><path d="M20 3h-2"/><path d="M22 5v-2"/><path d="m2.5 15.5 1.5 1.5"/><path d="M20 21h2"/><path d="M22 19v2"/><path d="m15.5 2.5 1.5-1.5"/><path d="m4 3h2"/><path d="M2 5V3"/><path d="M4 21H2"/><path d="M2 19v-2"/></svg>
+                 <h3 class="text-2xl"><span class="font-bold text-amber-800">* </span>AI-Powered Features</h3>
+             </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-xl font-bold mb-3"><span class="font-bold text-amber-800">* </span>Scan Receipt or Bill</h4>
+                    <div class="flex gap-2">
+                        <label for="receiptUploader" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <svg class="w-8 h-8 mb-2 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg>
+                                <p class="text-sm text-gray-500"><span class="font-semibold">Upload Image</span></p>
+                            </div>
+                            <input id="receiptUploader" type="file" class="hidden" accept="image/png, image/jpeg, image/webp" />
+                        </label>
+                        <button id="openCameraButton" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 mb-2 text-gray-500"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                                <p class="text-sm text-gray-500"><span class="font-semibold">Use Camera</span></p>
+                            </div>
+                        </button>
+                    </div>
+                    <div id="imagePreviewContainer" class="hidden text-center mt-4">
+                        <img id="imagePreview" class="max-h-40 mx-auto rounded-lg shadow-md" alt="Receipt Preview"/>
+                    </div>
+                    <div id="scanLoader" class="hidden mx-auto mt-4 loader"></div>
+                    <div id="scanResult" class="mt-4"></div>
+                    <div id="scanError" class="hidden mt-4 text-red-600 bg-red-100 p-3 rounded-lg text-sm"></div>
+                </div>
+
+                <div>
+                    <h4 class="text-xl font-bold mb-3"><span class="font-bold text-amber-800">* </span>Your AI Financial Insights</h4>
+                    <p class="text-gray-600 text-sm mb-4">Get a detailed analysis of your spending habits, limit adherence, and monthly goals.</p>
+                    <button id="analyzeButton" class="w-full bg-teal-700 hover:bg-teal-800 text-white btn-primary py-2 px-6">Get Insights</button>
+                    <div id="analyzeLoader" class="hidden mx-auto mt-4 loader"></div>
+                    <div id="analysisResult" class="mt-4 bg-gray-50 p-4 rounded-lg hidden border-2 border-transparent bg-clip-border" style="background-image: linear-gradient(white, white), linear-gradient(to right, #fde68a, #92400e); border-radius: 0.75rem;"></div>
+                    <div id="analyzeError" class="hidden mt-4 text-red-600 bg-red-100 p-3 rounded-lg text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="card-style rounded-xl p-6">
+                <h3 id="upcoming-expenses-title" class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Unpaid Planned Expenses</h3>
+                <div id="upcoming-expenses-list" class="space-y-3 max-h-96 overflow-y-auto no-scrollbar">
+                    <p id="no-upcoming" class="text-gray-500 text-center py-4 subtitle">No unpaid expenses.</p>
+                </div>
+            </div>
+            <div class="card-style rounded-xl p-6">
+                <h3 id="paid-expenses-title" class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Paid Expenses History</h3>
+                <div id="paid-expenses-list" class="space-y-3 max-h-96 overflow-y-auto no-scrollbar">
+                    <p id="no-paid" class="text-gray-500 text-center py-4 subtitle">No paid expenses yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-style rounded-xl p-6 mt-8">
+            <h3 class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Important Notes for the Month</h3>
+            <form id="notes-form" class="flex items-start gap-4 mb-4">
+                <textarea id="note-input" placeholder="Add a note..." class="input-style min-h-[40px] resize-y" rows="1" required></textarea>
+                <button type="submit" class="bg-sky-700 hover:bg-sky-800 text-white btn-primary py-2 px-6 flex-shrink-0">Save Note</button>
+            </form>
+            <div id="notes-list" class="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
+                <p id="no-notes" class="text-gray-500 text-center py-4 subtitle">No important notes for this month.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="category-limits-modal" class="hidden fixed inset-0 z-[100] bg-black bg-opacity-60 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-lg w-full card-style">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl"><span class="font-bold text-amber-800">* </span>Set Category Limits</h3>
+                <button id="close-limits-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl font-bold">&times;</button>
+            </div>
+            <div id="category-limits-form-container" class="space-y-3 max-h-80 overflow-y-auto no-scrollbar pr-2">
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="save-limits-btn" class="bg-purple-700 hover:bg-purple-800 text-white btn-primary py-2 px-6">Save Limits</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="camera-modal" class="hidden fixed inset-0 z-[100] bg-black bg-opacity-80 flex items-center justify-center p-4">
+        <div class="bg-white p-4 rounded-xl shadow-2xl max-w-2xl w-full card-style relative">
+            <video id="camera-feed" class="w-full h-auto rounded-lg" autoplay playsinline></video>
+            <div class="flex justify-center mt-4 gap-4">
+                 <button id="capture-btn" class="p-4 bg-blue-700 hover:bg-blue-800 text-white rounded-full transition-colors" title="Capture Image">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                 </button>
+            </div>
+            <button id="close-camera-modal-btn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 text-2xl leading-none">&times;</button>
+        </div>
+    </div>
+    <canvas id="capture-canvas" class="hidden"></canvas>
+
+    <script>
+        // --- DOM Elements ---
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const loginScreen = document.getElementById('login-screen'); // This ID is no longer in HTML, but we'll keep it for safety
+        const monthsScreen = document.getElementById('months-screen');
+        const appScreen = document.getElementById('app-screen');
+        const notificationContainer = document.getElementById('notification-container');
+        const monthFoldersList = document.getElementById('month-folders-list');
+        const jumpToMonthForm = document.getElementById('jump-to-month-form');
+        const backToMonthsBtn = document.getElementById('back-to-months-btn');
+        const monthSelector = document.getElementById('month-selector');
+        const totalBudgetEl = document.getElementById('total-budget');
+        const totalSpentEl = document.getElementById('total-spent');
+        const remainingBudgetEl = document.getElementById('remaining-budget');
+        const budgetForm = document.getElementById('budget-form');
+        const budgetNameInput = document.getElementById('budget-name');
+        const budgetAmountInput = document.getElementById('budget-amount');
+        const budgetTypeSelect = document.getElementById('budget-type');
+        const budgetList = document.getElementById('budget-list');
+        const expenseForm = document.getElementById('expense-form');
+        const expenseNameInput = document.getElementById('expense-name');
+        const expenseAmountInput = document.getElementById('expense-amount');
+        const expenseCategorySelect = document.getElementById('expense-category');
+        const expenseDateInput = document.getElementById('expense-date');
+        const expenseHourInput = document.getElementById('expense-hour');
+        const expenseMinuteInput = document.getElementById('expense-minute');
+        const expenseAmpmInput = document.getElementById('expense-ampm');
+        const upcomingList = document.getElementById('upcoming-expenses-list');
+        const paidList = document.getElementById('paid-expenses-list');
+        const upcomingTitleEl = document.getElementById('upcoming-expenses-title');
+        const paidTitleEl = document.getElementById('paid-expenses-title');
+        const notesForm = document.getElementById('notes-form');
+        const noteInput = document.getElementById('note-input');
+        const notesList = document.getElementById('notes-list');
+        const chartCanvas = document.getElementById('expense-chart');
+        const chartTitleEl = document.getElementById('chart-title');
+        const receiptUploader = document.getElementById('receiptUploader');
+        const scanLoader = document.getElementById('scanLoader');
+        const scanResult = document.getElementById('scanResult');
+        const scanError = document.getElementById('scanError');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const analyzeButton = document.getElementById('analyzeButton');
+        const analyzeLoader = document.getElementById('analyzeLoader');
+        const analysisResult = document.getElementById('analysisResult');
+        const analyzeError = document.getElementById('analyzeError');
+        const setCategoryLimitsBtn = document.getElementById('set-category-limits-btn');
+        const categoryLimitsModal = document.getElementById('category-limits-modal');
+        const closeLimitsModalBtn = document.getElementById('close-limits-modal-btn');
+        const saveLimitsBtn = document.getElementById('save-limits-btn');
+        const categoryLimitsFormContainer = document.getElementById('category-limits-form-container');
+        const openCameraButton = document.getElementById('openCameraButton');
+        const cameraModal = document.getElementById('camera-modal');
+        const cameraFeed = document.getElementById('camera-feed');
+        const captureBtn = document.getElementById('capture-btn');
+        const closeCameraModalBtn = document.getElementById('close-camera-modal-btn');
+        const captureCanvas = document.getElementById('capture-canvas');
+        const limitExceededList = document.getElementById('limit-exceeded-list');
+
+        // NEW AI Feature Button
+        const suggestCategoryBtn = document.getElementById('suggest-category-btn');
+
+        // --- State Variables ---
+        // NOTE: 'currentUser' has been removed
+        let selectedYearMonth = '';
+        let expenseChart = null;
+        let currentBudgets = [];
+        let currentExpenses = [];
+        let currentNotes = [];
+        let currentCategoryLimits = {};
+
+        const CATEGORIES = ['Shopping', 'Bills', 'Restaurant', 'Cafe or Stall', 'Home Groceries', 'Entertainment', 'Transport', 'Hospital', 'Fitness', 'Education', 'Miscellaneous Expenses'];
+        const categoryIcons = {
+            Shopping: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-amber-700"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`,
+            Bills: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-orange-700"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
+            Restaurant: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-orange-700"><path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8Z"/><path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 1.6.7 2.3 0l2.3-2.3"/><path d="M3 21v-4.1l4.1-4.1"/><path d="M22 3 8.7 16.3A5 5 0 0 1 3 16.3V21h4.7a5 5 0 0 1 3.5-1.5L21 8"/></svg>`,
+            'Cafe or Stall': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-yellow-700"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>`,
+            'Home Groceries': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-green-700"><path d="m5 11 4-7"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.6-7.4"/><path d="m9 11 1 9"/><path d="M4.5 15.5h15"/></svg>`,
+            Entertainment: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-red-700"><path d="m12 8 2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5z"/><path d="M20 3h-2"/><path d="M22 5v-2"/><path d="m2.5 15.5 1.5 1.5"/><path d="M20 21h2"/><path d="M22 19v2"/><path d="m15.5 2.5 1.5-1.5"/><path d="m4 3h2"/><path d="M2 5V3"/><path d="M4 21H2"/><path d="M2 19v-2"/></svg>`,
+            Transport: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-teal-700"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v1"/><path d="M16 17H5c-1.1 0-2-.9-2-2V7c0-1.1.9-2 2-2h8c.7 0 1.3.3 1.8.7l1.9 1.9c.5.4.9 1.1 1.3 1.9.4.8 2.2 1.9 2.2 1.9V17Z"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`,
+            Hospital: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-red-700"><path d="M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>`,
+            Fitness: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-lime-700"><path d="M5 9H4a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1"/><path d="M19 9h1a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-1"/><path d="M15 9h-6v6h6z"/></svg>`,
+            Education: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-700"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+            'Miscellaneous Expenses': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-600"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
+        };
+        
+        // --- AUTHENTICATION LOGIC (All Removed) ---
+        
+        // --- UPDATED LOCALSTORAGE FUNCTIONS ---
+        // This function is now simpler and doesn't require a user ID
+        const getBaseKey = (key, yearMonth) => {
+            return `${key}_${yearMonth}`;
+        }
+
+        const getBudgetsKey = (yearMonth) => getBaseKey('budgets', yearMonth);
+        const getExpensesKey = (yearMonth) => getBaseKey('expenses', yearMonth);
+        const getNotesKey = (yearMonth) => getBaseKey('notes', yearMonth);
+        const getCategoryLimitsKey = (yearMonth) => getBaseKey('categoryLimits', yearMonth);
+        const getOverBudgetAlertKey = (yearMonth) => getBaseKey('overBudgetAlertShown', yearMonth);
+        
+        const loadData = (key, defaultValue) => {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : defaultValue;
+        };
+        const saveData = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+        
+        const loadBudgets = (yearMonth) => loadData(getBudgetsKey(yearMonth), []);
+        const saveBudgets = (yearMonth, budgets) => saveData(getBudgetsKey(yearMonth), budgets);
+        const loadExpenses = (yearMonth) => loadData(getExpensesKey(yearMonth), []);
+        const saveExpenses = (yearMonth, expenses) => saveData(getExpensesKey(yearMonth), expenses);
+        const loadNotes = (yearMonth) => loadData(getNotesKey(yearMonth), []);
+        const saveNotes = (yearMonth, notes) => saveData(getNotesKey(yearMonth), notes);
+        const loadCategoryLimits = (yearMonth) => loadData(getCategoryLimitsKey(yearMonth), {});
+        const saveCategoryLimits = (yearMonth, limits) => saveData(getCategoryLimitsKey(yearMonth), limits);
+
+        // --- Helper Functions ---
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            let bgColor = 'bg-blue-500';
+            if (type === 'success') bgColor = 'bg-green-500';
+            if (type === 'error') bgColor = 'bg-red-500';
+            if (type === 'warning') bgColor = 'bg-yellow-500';
+
+            notification.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full opacity-0`;
+            notification.innerHTML = `<div class="flex items-center justify-between"><span>${message}</span><button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">×</button></div>`;
+            notificationContainer.appendChild(notification);
+            setTimeout(() => notification.classList.remove('translate-x-full', 'opacity-0'), 100);
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.classList.add('translate-x-full', 'opacity-0');
+                    setTimeout(() => notification.remove(), 5000);
+                }
+            }, 5000);
+        }
+
+        function showConfirmationModal(message, onConfirm) {
+            document.getElementById('confirmation-modal')?.remove();
+            const modal = document.createElement('div');
+            modal.id = 'confirmation-modal';
+            modal.className = 'fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full card-style">
+                    <p class="text-lg font-semibold mb-4 text-gray-800">${message}</p>
+                    <div class="flex justify-end space-x-3">
+                        <button id="modal-cancel" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition-colors">Cancel</button>
+                        <button id="modal-confirm" class="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors">Confirm</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            document.getElementById('modal-cancel').onclick = () => modal.remove();
+            document.getElementById('modal-confirm').onclick = () => {
+                onConfirm();
+                modal.remove();
+            };
+        }
+
+        function showSwitchMonthModal(message, onConfirm) {
+            document.getElementById('confirmation-modal')?.remove();
+            const modal = document.createElement('div');
+            modal.id = 'confirmation-modal';
+            modal.className = 'fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full card-style">
+                    <p class="text-lg font-semibold mb-4 text-gray-800">${message}</p>
+                    <div class="flex justify-end space-x-3">
+                        <button id="modal-cancel" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition-colors">Stay Here</button>
+                        <button id="modal-confirm" class="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors">Switch Month</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            document.getElementById('modal-cancel').onclick = () => modal.remove();
+            document.getElementById('modal-confirm').onclick = () => {
+                onConfirm();
+                modal.remove();
+            };
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
+        }
+
+        function getRelativeDueDate(dueDateString) {
+            if (!dueDateString) return 'No due date';
+            const now = new Date();
+            const dueDate = new Date(dueDateString);
+            if (isNaN(dueDate)) return 'Invalid date';
+
+            const diffTime = dueDate.getTime() - now.getTime();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dueDay = new Date(dueDateString);
+            dueDay.setHours(0, 0, 0, 0);
+            const dayDiff = Math.round((dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            const timeFormat = { hour: '2-digit', minute: '2-digit' };
+            if (diffTime < 0) { return `<span class="text-red-500 font-semibold">Overdue</span>`; }
+            if (dayDiff === 0) { return `Due <span class="font-semibold text-orange-500">today</span> at ${dueDate.toLocaleTimeString([], timeFormat)}`; }
+            if (dayDiff === 1) { return `Due <span class="font-semibold text-yellow-500">tomorrow</span> at ${dueDate.toLocaleTimeString([], timeFormat)}`; }
+            if (dayDiff > 1 && dayDiff <= 7) { return `Due in <span class="font-semibold text-cyan-600">${dayDiff} days</span> (${dueDate.toLocaleDateString([], { weekday: 'short' })})`; }
+            return `Due: ${dueDate.toLocaleDateString()} ${dueDate.toLocaleTimeString([], timeFormat)}`;
+        }
+        
+        function populateTimeDropdowns() {
+            expenseHourInput.innerHTML = '';
+            for (let i = 1; i <= 12; i++) {
+                expenseHourInput.insertAdjacentHTML('beforeend', `<option value="${i}">${i}</option>`);
+            }
+            expenseMinuteInput.innerHTML = '';
+            for (let i = 0; i < 60; i++) {
+                const minute = i.toString().padStart(2, '0');
+                expenseMinuteInput.insertAdjacentHTML('beforeend', `<option value="${minute}">${minute}</option>`);
+            }
+        }
+
+        function populateCategoryDropdown() {
+            expenseCategorySelect.innerHTML = '';
+            CATEGORIES.forEach(cat => {
+                expenseCategorySelect.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`);
+            });
+        }
+        
+        function getAllMonthsWithData() {
+            const months = new Set();
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                // Check if the key matches the pattern (e.g., "expenses_YYYY-MM" or "budgets_YYYY-MM")
+                const match = key.match(/^(budgets|expenses|notes|categoryLimits)_(20\d{2}-\d{2})$/);
+                if (match && match[2]) {
+                    months.add(match[2]);
+                }
+            }
+            // Sort months reverse-chronologically
+            return Array.from(months).sort().reverse();
+        }
+
+        function renderMonthFolders() {
+            monthFoldersList.innerHTML = '';
+            document.getElementById('no-months-msg')?.remove();
+            const allMonths = getAllMonthsWithData();
+            if (allMonths.length === 0) {
+                 monthFoldersList.insertAdjacentHTML('afterend', '<p id="no-months-msg" class="text-gray-500 text-center col-span-full">No expenses saved yet. Use the selector above to start.</p>');
+            }
+
+            allMonths.forEach(yearMonth => {
+                const expenses = loadExpenses(yearMonth);
+                const totalSpent = expenses.filter(exp => exp.paid).reduce((sum, exp) => sum + exp.amount, 0);
+                const monthName = new Date(yearMonth + '-02').toLocaleString('default', { month: 'long' });
+                const year = yearMonth.split('-')[0];
+                const folderHTML = `
+                    <div class="month-folder card-style rounded-xl text-center transition-transform duration-300 flex flex-col" data-year-month="${yearMonth}">
+                        <div class="p-6 cursor-pointer transform hover:scale-105 flex-grow">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            <h3 class="text-xl font-bold text-amber-900">${monthName} ${year}</h3>
+                            <p class="text-gray-600">Spent: ${formatCurrency(totalSpent)}</p>
+                        </div>
+                        <div class="border-t border-gray-200 p-2">
+                            <button class="delete-month-btn w-full text-red-600 hover:bg-red-50 rounded-md p-1 text-sm font-semibold transition-colors">
+                                Delete Month
+                            </button>
+                        </div>
+                    </div>`;
+                monthFoldersList.insertAdjacentHTML('beforeend', folderHTML);
+            });
+        }
+        
+        function deleteMonthData(yearMonth) {
+            const monthName = new Date(yearMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
+            showConfirmationModal(`Are you sure? This will permanently delete all data for ${monthName}.`, () => {
+                localStorage.removeItem(getBudgetsKey(yearMonth));
+                localStorage.removeItem(getExpensesKey(yearMonth));
+                localStorage.removeItem(getNotesKey(yearMonth));
+                localStorage.removeItem(getCategoryLimitsKey(yearMonth));
+                localStorage.removeItem(getOverBudgetAlertKey(yearMonth));
+                renderMonthFolders();
+                showNotification(`All data for ${monthName} has been deleted.`, 'success');
+            });
+        }
+
+        function initializeChart() {
+            if (expenseChart) expenseChart.destroy();
+            const ctx = chartCanvas.getContext('2d');
+            expenseChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#92400e', '#ea580c', '#eab308', '#65a30d', '#059669', '#0891b2', '#2563eb', '#c2410c', '#6b7280', '#4f46e5', '#dc2626'], borderWidth: 0, hoverOffset: 10 }] },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { 
+                                padding: 20, 
+                                usePointStyle: true, 
+                                font: { 
+                                    size: 16,
+                                    weight: 'bold'
+                                } 
+                            } 
+                        } 
+                    } 
+                }
+            });
+        }
+
+        function updateChart(expenses) {
+            const categoryTotals = {};
+            expenses.filter(expense => expense.paid).forEach(expense => {
+                categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
+            });
+            const categories = Object.keys(categoryTotals);
+            const amounts = Object.values(categoryTotals);
+            if (categories.length === 0) {
+                expenseChart.data.labels = ['No paid expenses yet'];
+                expenseChart.data.datasets[0].data = [1];
+                expenseChart.data.datasets[0].backgroundColor = ['#e5e7eb'];
+            } else {
+                expenseChart.data.labels = categories;
+                expenseChart.data.datasets[0].data = amounts;
+                expenseChart.data.datasets[0].backgroundColor = ['#92400e', '#ea580c', '#eab308', '#65a30d', '#059669', '#0891b2', '#2563eb', '#c2410c', '#6b7280', '#4f46e5', '#dc2626'];
+            }
+            expenseChart.update();
+        }
+
+        function updateAllDisplays() {
+            updateSummaryDisplay();
+            updateBudgetList();
+            updateExpenseLists();
+            updateNotesList();
+            updateChart(currentExpenses);
+            updateLimitExceededDisplay();
+        }
+        
+        function updateLimitExceededDisplay() {
+            const overspentCategories = [];
+            for (const category in currentCategoryLimits) {
+                const limit = currentCategoryLimits[category];
+                const spentSoFar = currentExpenses
+                    .filter(exp => exp.paid && exp.category === category)
+                    .reduce((sum, exp) => sum + exp.amount, 0);
+
+                if (spentSoFar > limit) {
+                    overspentCategories.push({ name: category, spent: spentSoFar, limit: limit });
+                }
+            }
+
+            if (overspentCategories.length > 0) {
+                limitExceededList.innerHTML = overspentCategories.map(cat => `
+                    <div class="flex justify-between items-center text-sm p-2 bg-red-50 rounded-md">
+                        <span class="font-semibold text-red-800">${cat.name}</span>
+                        <span class="text-red-600">Spent ${formatCurrency(cat.spent)} of ${formatCurrency(cat.limit)}</span>
+                    </div>
+                `).join('');
+            } else {
+                limitExceededList.innerHTML = '<p class="text-sm text-green-600 text-center py-2">All categories are within budget!</p>';
+            }
+        }
+
+        function updateSummaryDisplay() {
+            const totalFunds = currentBudgets.reduce((sum, budget) => sum + budget.amount, 0);
+            const totalSpent = currentExpenses.filter(expense => expense.paid).reduce((sum, expense) => sum + expense.amount, 0);
+            const remaining = totalFunds - totalSpent;
+            
+            totalBudgetEl.textContent = formatCurrency(totalFunds);
+            totalSpentEl.textContent = formatCurrency(totalSpent);
+            remainingBudgetEl.textContent = formatCurrency(remaining);
+            remainingBudgetEl.className = 'text-3xl font-bold ' + (remaining < 0 ? 'text-red-600' : remaining < totalFunds * 0.2 ? 'text-yellow-600' : 'text-green-600');
+
+            if (remaining < 0 && !loadData(getOverBudgetAlertKey(selectedYearMonth), false)) {
+                showNotification("ALERT: You have gone over your total monthly budget!", 'error');
+                saveData(getOverBudgetAlertKey(selectedYearMonth), true);
+            }
+        }
+
+        function updateBudgetList() {
+            budgetList.innerHTML = '';
+            if (currentBudgets.length === 0) {
+                budgetList.innerHTML = '<p class="text-gray-500 text-center text-sm py-2 subtitle">No budget added yet.</p>';
+                return;
+            }
+            
+            currentBudgets.forEach(budget => {
+                let bgColor = 'bg-blue-50';
+                let textColor = 'text-blue-700';
+                if(budget.type === 'savings') { bgColor = 'bg-green-50'; textColor = 'text-green-700'; }
+                if(budget.type === 'debt' || budget.type === 'loan') { bgColor = 'bg-red-50'; textColor = 'text-red-700'; }
+
+                budgetList.insertAdjacentHTML('beforeend', `
+                <div class="flex items-center justify-between p-2 ${bgColor} rounded-lg">
+                    <p class="text-gray-800">${budget.name} <span class="text-xs italic">(${budget.type})</span></p>
+                    <div class="flex items-center gap-3">
+                       <p class="font-semibold ${textColor}">${formatCurrency(budget.amount)}</p>
+                       <button onclick="deleteBudget('${budget.id}')" class="p-1 text-red-500 hover:text-red-700 font-bold">&times;</button>
+                    </div>
+                </div>`);
+            });
+        }
+        
+        function updateExpenseLists() {
+            const paid = currentExpenses.filter(expense => expense.paid).sort((a, b) => new Date(b.paidDate) - new Date(a.paidDate));
+            const unpaid = currentExpenses.filter(expense => !expense.paid).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            
+            upcomingList.innerHTML = unpaid.length === 0 ? '<p class="text-gray-500 text-center py-4 subtitle">No unpaid expenses.</p>' : unpaid.map(expense => `
+                <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg border-l-4 border-amber-500">
+                    <div class="flex items-start gap-3 flex-grow">
+                        <div class="flex-shrink-0">${categoryIcons[expense.category] || categoryIcons["Miscellaneous Expenses"]}</div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900">${expense.name}</h4>
+                            <p class="text-sm text-gray-600">${expense.category}</p>
+                            <p class="text-sm text-gray-500">${getRelativeDueDate(expense.dueDate)}</p>
+                        </div>
+                    </div>
+                    <div class="text-right ml-2 flex-shrink-0">
+                        <p class="font-bold text-amber-900">${formatCurrency(expense.amount)}</p>
+                        <button onclick="markExpenseAsPaid('${expense.id}')" class="mt-2 p-2 bg-green-600 hover:bg-green-700 text-white rounded-full transition-colors" title="Mark as Paid">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><path d="M20 6 9 17l-5-5"/></svg>
+                        </button>
+                    </div>
+                </div>`).join('');
+
+            paidList.innerHTML = paid.length === 0 ? '<p class="text-gray-500 text-center py-4 subtitle">No paid expenses yet.</p>' : paid.map(expense => `
+                <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg border-l-4 border-green-500">
+                    <div class="flex items-start gap-3 flex-grow">
+                        <div class="flex-shrink-0">${categoryIcons[expense.category] || categoryIcons["Miscellaneous Expenses"]}</div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900">${expense.name}</h4>
+                            <p class="text-sm text-gray-600">${expense.category}</p>
+                            <p class="text-sm text-green-600">Paid on ${new Date(expense.paidDate).toLocaleDateString()}</p>
+
+                        </div>
+                    </div>
+                     <div class="text-right ml-2 flex-shrink-0">
+                        <p class="font-bold text-green-700">${formatCurrency(expense.amount)}</p>
+                        <button onclick="deleteExpense('${expense.id}')" class="mt-2 p-2 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors" title="Delete Expense">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"></path></svg>
+                        </button>
+                    </div>
+                </div>`).join('');
+
+            upcomingTitleEl.textContent = `Unpaid Planned Expenses (${unpaid.length})`;
+            paidTitleEl.textContent = `Paid Expenses History (${paid.length})`;
+        }
+
+        function updateNotesList() {
+            notesList.innerHTML = currentNotes.length === 0 ? '<p class="text-gray-500 text-center py-4 subtitle">No important notes for this month.</p>' : currentNotes.map(note => `
+                <div class="flex items-start justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-sky-500">
+                    <div class="flex-grow">
+                        <p class="text-gray-800">${note.text}</p>
+                        <p class="text-xs text-gray-500 mt-1">Added on ${new Date(note.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <button onclick="deleteNote('${note.id}')" class="ml-3 p-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors flex-shrink-0" title="Delete Note">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"></path></svg>
+                    </button>
+                </div>`).join('');
+        }
+
+        function loadMonthData(yearMonth) {
+            currentBudgets = loadBudgets(yearMonth);
+            currentExpenses = loadExpenses(yearMonth);
+            currentNotes = loadNotes(yearMonth);
+            currentCategoryLimits = loadCategoryLimits(yearMonth);
+            updateAllDisplays();
+            chartTitleEl.textContent = `Category Spending for ${new Date(yearMonth + '-02').toLocaleDateString([], { month: 'long', year: 'numeric' })}`;
+        }
+
+        function deleteBudget(budgetId) {
+             showConfirmationModal('Are you sure you want to delete this budget entry?', () => {
+                 currentBudgets = currentBudgets.filter(b => b.id !== budgetId);
+                 saveBudgets(selectedYearMonth, currentBudgets);
+                 updateAllDisplays();
+                 showNotification('Budget entry deleted!', 'success');
+             });
+        }
+
+        function markExpenseAsPaid(expenseId) {
+            const expense = currentExpenses.find(exp => exp.id === expenseId);
+            if (expense) {
+                expense.paid = true;
+                expense.paidDate = new Date().toISOString();
+                saveExpenses(selectedYearMonth, currentExpenses);
+                updateAllDisplays();
+                showNotification(`"${expense.name}" marked as paid!`, 'success');
+            }
+        }
+
+        function deleteExpense(expenseId) {
+            showConfirmationModal('Are you sure you want to delete this expense?', () => {
+                currentExpenses = currentExpenses.filter(exp => exp.id !== expenseId);
+                saveExpenses(selectedYearMonth, currentExpenses);
+                updateAllDisplays();
+                showNotification('Expense deleted!', 'success');
+            });
+        }
+
+        function deleteNote(noteId) {
+            showConfirmationModal('Are you sure you want to delete this note?', () => {
+                currentNotes = currentNotes.filter(note => note.id !== noteId);
+                saveNotes(selectedYearMonth, currentNotes);
+                updateNotesList();
+                showNotification('Note deleted!', 'success');
+            });
+        }
+        
+        async function scanReceiptImage(file) {
+             if (!file) { showNotification('No image file provided.', 'error'); return; }
+             if (!selectedYearMonth) { showNotification('Please select a month before scanning.', 'error'); return; }
+
+             scanLoader.classList.remove('hidden');
+             scanResult.innerHTML = '';
+             scanError.classList.add('hidden');
+             imagePreview.src = URL.createObjectURL(file);
+             imagePreviewContainer.classList.remove('hidden');
+
+             try {
+                 const imagePart = await fileToGenerativePart(file);
+                 const prompt = {
+                     parts: [
+                         { text: `Analyze this receipt or bill. Extract a list of items with their name, amount, and category. The valid categories are: ${CATEGORIES.join(', ')}. Assign the most appropriate category. Also extract the date in YYYY-MM-DD format. If no date is found, use today's date, which is ${new Date().toISOString().split('T')[0]}. Return a single, valid JSON object with the structure: {"date": "YYYY-MM-DD", "items": [{"name": "string", "amount": number, "category": "string"}]}`},
+                         imagePart
+                     ]
+                 };
+
+                 const responseText = await callGemini('gemini-1.5-flash-latest', prompt);
+                 const data = JSON.parse(responseText);
+
+                 if (!data.items || data.items.length === 0) {
+                     showNotification('AI could not find any items on the receipt.', 'info');
+                     scanResult.innerHTML = `<p class="text-amber-700 text-center font-semibold">No items found.</p>`;
+                     return;
+                 }
+                 let addedCount = 0;
+                 data.items.forEach(item => {
+                     const expense = {
+                         id: crypto.randomUUID(),
+                         name: item.name.trim(),
+                         amount: parseFloat(item.amount),
+                         category: item.category,
+                         dueDate: `${data.date || new Date().toISOString().split('T')[0]}T12:00`,
+                         paid: false,
+                         createdAt: new Date().toISOString()
+                     };
+                     if (expense.name && !isNaN(expense.amount) && expense.amount > 0 && CATEGORIES.includes(expense.category)) {
+                         currentExpenses.push(expense);
+                         addedCount++;
+                     }
+                 });
+                 
+                 if (addedCount > 0) {
+                     saveExpenses(selectedYearMonth, currentExpenses);
+                     updateAllDisplays();
+                     showNotification(`${addedCount} expense(s) were added!`, 'success');
+                     scanResult.innerHTML = `<p class="text-green-700 text-center font-semibold">Success! ${addedCount} expenses added.</p>`;
+                 } else {
+                    showNotification('No valid expenses could be added from the receipt.', 'warning');
+                    scanResult.innerHTML = `<p class="text-amber-700 text-center font-semibold">No valid items found.</p>`;
+                 }
+
+             } catch (error) {
+                 scanError.textContent = `Error: ${error.message}`;
+                 scanError.classList.remove('hidden');
+             } finally {
+                 scanLoader.classList.add('hidden');
+                 receiptUploader.value = '';
+             }
+        }
+
+        function fileToGenerativePart(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve({ inlineData: { data: reader.result.split(',')[1], mimeType: file.type } });
+                reader.onerror = err => reject(err);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function callGemini(model, prompt) {
+            const response = await fetch('/api/call-gemini', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ model, prompt }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || `API request failed with status ${response.status}`);
+            }
+            
+            return result.text;
+        }
+        
+        // --- NEW AI FEATURE FUNCTION ---
+        async function suggestCategory() {
+            const expenseName = expenseNameInput.value.trim();
+            if (!expenseName) {
+                showNotification('Please enter an expense name first.', 'warning');
+                return;
+            }
+
+            const btnOriginalContent = suggestCategoryBtn.innerHTML;
+            suggestCategoryBtn.innerHTML = '<div class="loader" style="width: 20px; height: 20px; border-width: 2px;"></div>';
+            suggestCategoryBtn.disabled = true;
+
+            try {
+                const categoriesList = CATEGORIES.join(', ');
+                const prompt = {
+                    parts: [{
+                        text: `Given the expense name "${expenseName}", choose the single best category from this list: [${categoriesList}]. Respond with only the category name and nothing else.`
+                    }]
+                };
+                
+                const suggestedCategory = await callGemini('gemini-pro', prompt);
+                const cleanCategory = suggestedCategory.trim();
+
+                if (CATEGORIES.includes(cleanCategory)) {
+                    expenseCategorySelect.value = cleanCategory;
+                    showNotification(`Category set to "${cleanCategory}"`, 'success');
+                } else {
+                    console.error('Invalid category from AI:', cleanCategory);
+                    showNotification(`AI suggestion was not a valid category.`, 'error');
+                }
+            } catch (error) {
+                console.error('Category suggestion error:', error);
+                showNotification('Error suggesting category.', 'error');
+            } finally {
+                suggestCategoryBtn.innerHTML = btnOriginalContent;
+                suggestCategoryBtn.disabled = false;
+            }
+        }
+        // --- END NEW AI FEATURE FUNCTION ---
+
+        function openCategoryLimitsModal() {
+            categoryLimitsFormContainer.innerHTML = '';
+            CATEGORIES.forEach(cat => {
+                const limit = currentCategoryLimits[cat] || '';
+                const spentSoFar = currentExpenses.filter(e => e.paid && e.category === cat).reduce((sum, e) => sum + e.amount, 0);
+                const html = `
+                    <div class="flex items-center gap-4">
+                        <label class="w-1/3 font-semibold text-gray-700">${cat}</label>
+                        <input type="number" data-category="${cat}" value="${limit}" placeholder="No limit" class="input-style w-1/3">
+                        <span class="text-sm text-gray-500 w-1/3">Spent: ${formatCurrency(spentSoFar)}</span>
+                    </div>`;
+                categoryLimitsFormContainer.insertAdjacentHTML('beforeend', html);
+            });
+            categoryLimitsModal.classList.remove('hidden');
+        }
+
+        function stopCameraStream() {
+            if (cameraFeed.srcObject) {
+                cameraFeed.srcObject.getTracks().forEach(track => track.stop());
+                cameraFeed.srcObject = null;
+            }
+        }
+        
+        // --- App Initialization ---
+        
+        // This is the new app startup. It runs after the page loads.
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide the main loading spinner
+            setTimeout(() => loadingSpinner.classList.add('opacity-0', 'pointer-events-none'), 500);
+
+            // Show the months screen by default
+            if(loginScreen) loginScreen.classList.add('hidden'); // Hide login
+            monthsScreen.classList.remove('hidden'); // Show months
+            appScreen.classList.add('hidden'); // Hide app
+            
+            // Load all existing month folders
+            renderMonthFolders();
+
+            // Prepare the dropdowns in the app screen
+            populateTimeDropdowns();
+            populateCategoryDropdown();
+        });
+
+        // --- Event Listeners ---
+
+        monthFoldersList.addEventListener('click', (e) => {
+            const folderCard = e.target.closest('.month-folder');
+            if (!folderCard) return;
+            const yearMonth = folderCard.dataset.yearMonth;
+            if (e.target.closest('.delete-month-btn')) {
+                deleteMonthData(yearMonth);
+            } else {
+                selectedYearMonth = yearMonth;
+                monthSelector.value = yearMonth;
+                monthsScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+                if (!expenseChart) initializeChart();
+                loadMonthData(yearMonth);
+            }
+        });
+
+        jumpToMonthForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const yearMonth = this.querySelector('input[type="month"]').value;
+            if (yearMonth) {
+                selectedYearMonth = yearMonth;
+                monthSelector.value = yearMonth;
+                monthsScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+                if (!expenseChart) initializeChart();
+                loadMonthData(yearMonth);
+            }
+        });
+
+        backToMonthsBtn.addEventListener('click', () => {
+            appScreen.classList.add('hidden');
+            monthsScreen.classList.remove('hidden');
+            renderMonthFolders();
+        });
+        
+        monthSelector.addEventListener('change', function() {
+            selectedYearMonth = this.value;
+            loadMonthData(selectedYearMonth);
+        });
+        
+        budgetForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const name = budgetNameInput.value.trim();
+            const amount = parseFloat(budgetAmountInput.value);
+            const type = budgetTypeSelect.value;
+
+            if (!name || isNaN(amount) || amount <= 0) {
+                showNotification('Please enter a valid name and positive amount.', 'error');
+                return;
+            }
+            
+            const newBudgetEntry = { id: crypto.randomUUID(), name, amount, type };
+            currentBudgets.push(newBudgetEntry);
+            saveBudgets(selectedYearMonth, currentBudgets);
+            showNotification('Budget entry added!', 'success');
+            
+            updateAllDisplays();
+            budgetForm.reset();
+        });
+
+        expenseForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const dateValue = expenseDateInput.value;
+            let hourValue = parseInt(expenseHourInput.value);
+            const minuteValue = expenseMinuteInput.value;
+            const ampmValue = expenseAmpmInput.value;
+            const name = expenseNameInput.value.trim();
+            const amount = parseFloat(expenseAmountInput.value);
+            const category = expenseCategorySelect.value;
+            
+            if (!name || isNaN(amount) || amount <= 0 || !dateValue) {
+                showNotification('Please fill all expense fields correctly.', 'error');
+                return;
+            }
+            
+            if (ampmValue === 'PM' && hourValue !== 12) {
+                hourValue += 12;
+            }
+            if (ampmValue === 'AM' && hourValue === 12) {
+                hourValue = 0;
+            }
+            const formattedHour = hourValue.toString().padStart(2, '0');
+            const combinedDateTime = `${dateValue}T${formattedHour}:${minuteValue}`;
+
+            const categoryLimit = currentCategoryLimits[category];
+            const spentSoFar = currentExpenses.filter(exp => exp.paid && exp.category === category).reduce((sum, exp) => sum + exp.amount, 0);
+            if (categoryLimit && (spentSoFar + amount > categoryLimit)) {
+                showNotification(`Warning: This expense will exceed your limit for ${category}!`, 'warning');
+            }
+            
+            const expense = {
+                id: crypto.randomUUID(), name, amount, category,
+                dueDate: combinedDateTime,
+                paid: false, createdAt: new Date().toISOString()
+            };
+            const expenseYearMonth = expense.dueDate.slice(0, 7);
+            
+            if (expenseYearMonth === selectedYearMonth) {
+                currentExpenses.push(expense);
+                saveExpenses(selectedYearMonth, currentExpenses);
+                updateAllDisplays();
+                showNotification(`Expense "${expense.name}" saved!`, 'success');
+            } else {
+                let otherMonthExpenses = loadExpenses(expenseYearMonth);
+                otherMonthExpenses.push(expense);
+                saveExpenses(expenseYearMonth, otherMonthExpenses);
+                const monthName = new Date(expenseYearMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
+                
+                showSwitchMonthModal(`Expense "${expense.name}" was saved to ${monthName}. Do you want to switch to that month now?`, () => {
+                     selectedYearMonth = expenseYearMonth;
+                     monthSelector.value = expenseYearMonth;
+                     loadMonthData(expenseYearMonth);
+                });
+            }
+            expenseForm.reset();
+        });
+
+        notesForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const noteText = noteInput.value.trim();
+            if (noteText) {
+                currentNotes.unshift({ id: crypto.randomUUID(), text: noteText, createdAt: new Date().toISOString() });
+                saveNotes(selectedYearMonth, currentNotes);
+                updateNotesList();
+                noteInput.value = '';
+                showNotification('Note added!', 'success');
+            } else showNotification('Note cannot be empty.', 'error');
+        });
+
+        setCategoryLimitsBtn.addEventListener('click', openCategoryLimitsModal);
+        closeLimitsModalBtn.addEventListener('click', () => categoryLimitsModal.classList.add('hidden'));
+        saveLimitsBtn.addEventListener('click', () => {
+            const newLimits = {};
+            categoryLimitsFormContainer.querySelectorAll('input').forEach(input => {
+                const cat = input.dataset.category;
+                const val = parseFloat(input.value);
+                if (!isNaN(val) && val > 0) newLimits[cat] = val;
+            });
+            currentCategoryLimits = newLimits;
+            saveCategoryLimits(selectedYearMonth, currentCategoryLimits);
+            categoryLimitsModal.classList.add('hidden');
+            showNotification('Category limits saved!', 'success');
+            updateLimitExceededDisplay();
+        });
+
+        receiptUploader.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                scanReceiptImage(file);
+            }
+        });
+        
+        // NEW AI Feature Listener
+        suggestCategoryBtn.addEventListener('click', suggestCategory);
+
+        analyzeButton.addEventListener('click', async () => {
+            const paidExpenses = currentExpenses.filter(exp => exp.paid);
+            if (paidExpenses.length === 0) {
+                showNotification('You have no paid expenses to analyze.', 'warning');
+                return;
+            }
+            
+            analyzeButton.disabled = true;
+            analyzeLoader.classList.remove('hidden');
+            analysisResult.classList.add('hidden');
+            analyzeError.classList.add('hidden');
+
+            try {
+                const systemPrompt = `You are a helpful and friendly financial advisor for a user in India (currency is INR). Analyze the user's monthly financial data. Your goal is to provide a detailed, holistic, and actionable analysis.
+                1.  **Review Expenses:** Look for patterns or high spending in non-essential categories like 'Restaurant', 'Cafe or Stall', 'Shopping', 'Entertainment'.
+                2.  **Check Limits:** Compare spending against the user's set 'categoryLimits'. Explicitly point out categories that are over budget.
+                3.  **Read Notes:** Review the user's 'notes' to understand their goals. Connect your advice to these notes (e.g., "I see you're saving for a trip, let's look at how your spending on 'Restaurant' impacts that goal...").
+                4.  **Synthesize:** Combine everything into a cohesive analysis. Address the user directly. Provide specific, actionable tips. Format your response with clear headings (e.g., **Spending Habits**, **Budget Check**, **Final Advice**) using markdown for bolding.`;
+                
+                const prompt = { parts: [{ text: `${systemPrompt}\n\nHere is the user's data:\n
+                **Paid Expenses:**\n${JSON.stringify(paidExpenses, null, 2)}\n\n
+                **Category Limits:**\n${JSON.stringify(currentCategoryLimits, null, 2)}\n\n
+                **User Notes:**\n${JSON.stringify(currentNotes, null, 2)}` 
+                }] };
+                let responseText = await callGemini('gemini-pro', prompt);
+                
+                responseText = responseText.replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-900">$1</strong>');
+                responseText = responseText.replace(/\n/g, '<br>');
+
+                analysisResult.innerHTML = `<div class="flex items-center gap-2 mb-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-800"><path d="M12 2a10 10 0 1 0 10 10c0-2-1-4-3-5.5s-4.5-3-5.5-3Z"/><path d="m14 12-2 2-2-2"/></svg><p class="font-bold text-lg text-amber-900">AI Financial Insights</p></div><p class="text-gray-700">${responseText}</p>`;
+                analysisResult.classList.remove('hidden');
+            } catch (error) {
+                analyzeError.textContent = `Error: ${error.message}`;
+                analyzeError.classList.remove('hidden');
+            } finally {
+                analyzeButton.disabled = false;
+                analyzeLoader.classList.add('hidden');
+            }
+        });
+
+        openCameraButton.addEventListener('click', async () => {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showNotification('Camera access is not supported by your browser.', 'error');
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                cameraFeed.srcObject = stream;
+                cameraModal.classList.remove('hidden');
+            } catch (error) {
+                console.error("Error accessing camera:", error);
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    showNotification('Camera permission was denied. Please enable it in browser settings.', 'error');
+                } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    showNotification('No camera was found on this device.', 'error');
+                } else {
+                    showNotification('Could not access the camera.', 'error');
+                }
+            }
+        });
+
+        closeCameraModalBtn.addEventListener('click', () => {
+            stopCameraStream();
+            cameraModal.classList.add('hidden');
+        });
+
+        captureBtn.addEventListener('click', () => {
+            const context = captureCanvas.getContext('2d');
+            captureCanvas.width = cameraFeed.videoWidth;
+            captureCanvas.height = cameraFeed.videoHeight;
+            context.drawImage(cameraFeed, 0, 0, cameraFeed.videoWidth, cameraFeed.videoHeight);
+            
+            stopCameraStream();
+            cameraModal.classList.add('hidden');
+            
+            captureCanvas.toBlob(blob => {
+                if (blob) {
+                    const file = new File([blob], "receipt-capture.jpg", { type: 'image/jpeg' });
+                    scanReceiptImage(file);
+                }
+            }, 'image/jpeg');
+        });
+
+        // Make functions globally accessible for inline event handlers
+        window.markExpenseAsPaid = markExpenseAsPaid;
+        window.deleteExpense = deleteExpense;
+        window.deleteNote = deleteNote;
+        window.deleteBudget = deleteBudget;
+    </script>
+</body>
+</html>
+
