@@ -2,1167 +2,1242 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SpendCount AI - Expense Tracker</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4A90E2">
-    <link rel="icon" href="icons/icon-192x192.png" type="image/png">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendCount - Your Personal Expense Tracker</title>
+    <link rel="manifest" href="/manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Times+New+Roman&display=swap" rel="stylesheet">
+    
+    <!-- FIREBASE SDK SCRIPTS -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-            overscroll-behavior: none;
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow-x: hidden;
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #6D4C41;
+            background-color: #f0f2f5;
+            background-image:
+                radial-gradient(circle at 15% 15%, rgba(188, 170, 164, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(216, 201, 195, 0.15) 0%, transparent 50%);
+            background-attachment: fixed;
         }
         h1, h2, h3 {
-            color: #2c3e50;
-            border-bottom: 2px solid #ecf0f1;
-            padding-bottom: 8px;
-            font-weight: 600;
-        }
-        h1 {
-            text-align: center;
-            font-size: 1.8em;
-            color: #4A90E2;
-            border: none;
-        }
-        .budget-summary {
-            background-color: #ecf0f1;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        .budget-summary h2 {
-            margin: 0 0 10px 0;
-            font-size: 1.1em;
-            color: #7f8c8d;
-            text-transform: uppercase;
-            border: none;
-        }
-        .budget-summary .amount {
-            font-size: 2.5em;
+            font-family: 'Times New Roman', Times, serif;
+            color: #4E342E;
             font-weight: 700;
-            color: #2c3e50;
         }
-        form {
-            margin-bottom: 25px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
+        .subtitle {
+            font-family: Arial, sans-serif;
             font-weight: 600;
-            font-size: 0.95em;
         }
-        input[type="text"],
-        input[type="number"],
-        input[type="date"],
-        select {
+        .card-style {
+            background: #FFFFFF;
+            border: 1px solid #E0E0E0;
+            box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.05);
+        }
+        .btn-primary {
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            transform: scale(1);
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+        }
+        .input-style {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #bdc3c7;
-            border-radius: 8px;
-            box-sizing: border-box; /* Important for padding to work with 100% width */
-            font-size: 1em;
+            background-color: #f9fafb;
+            color: #1f2937;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
         }
-        button {
-            background-color: #4A90E2;
-            color: white;
-            padding: 12px 18px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 1.05em;
-            font-weight: 600;
-            transition: background-color 0.3s ease;
+        .input-style::placeholder {
+            color: #6b7280;
         }
-        button:hover {
-            background-color: #357ABD;
+        .input-style:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #92400e;
         }
-        button:disabled {
-            background-color: #95a5a6;
-            cursor: not-allowed;
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #92400e; /* Matching theme color */
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
         }
-        ul {
-            list-style-type: none;
-            padding: 0;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        li {
-            background-color: #fafafa;
-            padding: 15px;
-            margin-bottom: 10px;
-            border: 1px solid #ecf0f1;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        li .info {
-            flex-grow: 1;
-        }
-        li .info strong {
-            font-size: 1.1em;
-            color: #2c3e50;
-        }
-        li .info .category {
-            font-size: 0.9em;
-            color: #7f8c8d;
-            display: block;
-            margin-top: 5px;
-        }
-        li .info .date-time {
-            font-size: 0.8em;
-            color: #95a5a6;
-            display: block;
-            margin-top: 5px;
-        }
-        li .amount {
-            font-size: 1.2em;
-            font-weight: 600;
-        }
-        .expense .amount { color: #e74c3c; }
-        .income .amount, .loan .amount, .debt .amount { color: #2ecc71; }
-        .planned .amount { color: #f39c12; }
-        
-        .tab-content {
+        #category-limits-modal.hidden, #camera-modal.hidden {
             display: none;
         }
-        .tab-content.active {
-            display: block;
-        }
-        .tabs {
-            display: flex;
-            flex-wrap: wrap; /* Allow tabs to wrap on small screens */
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ecf0f1;
-        }
-        .tab-link {
-            padding: 10px 15px;
-            cursor: pointer;
-            background-color: #ecf0f1;
-            border: none;
-            font-size: 0.95em;
-            font-weight: 600;
-            color: #7f8c8d;
-            border-top-left-radius: 8px;
-            border-top-right-radius: 8px;
-            margin-right: 5px;
-            margin-bottom: -2px; /* Aligns with the border */
-        }
-        .tab-link.active {
-            background-color: #4A90E2;
-            color: #ffffff;
-        }
-
-        .category-budget-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .category-budget-item .info {
-            flex-grow: 1;
-        }
-        .category-budget-item .status {
-            font-weight: 600;
-            font-size: 0.95em;
-        }
-        .status.over-budget {
-            color: #e74c3c;
-        }
-        .status.under-budget {
-            color: #2ecc71;
-        }
-        .ai-tip {
-            font-size: 0.9em;
-            color: #34495e;
-            background-color: #ecf0f1;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 6px;
-            border-left: 4px solid #4A90E2;
-            width: 100%;
-        }
-        .ai-tip.loading {
-            color: #7f8c8d;
-            font-style: italic;
-        }
-        .delete-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 5px 8px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8em;
-            margin-left: 10px;
-        }
-        .suggest-btn {
-            background: #2ecc71;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9em;
-            margin-left: 10px;
-            width: auto; /* Override full width */
-        }
-        li.suggestion-item .info {
-            font-size: 1em;
-            color: #34495e;
-        }
-
-        /* AI Scan Styles */
-        #scan-receipt-form {
-            border: 2px dashed #4A90E2;
-            padding: 20px;
-            border-radius: 10px;
-            background-color: #fafdff;
-        }
-        #ai-response {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #ecf0f1;
-            border-radius: 8px;
-            display: none; /* Hidden by default */
-        }
-        #ai-response.loading,
-        #financial-report-response.loading {
-            display: block;
-            text-align: center;
-            color: #7f8c8d;
-            font-style: italic;
-            padding: 20px;
-            background-color: #fafdff;
-        }
-        #ai-response.error,
-        #financial-report-response.error {
-            display: block;
-            background-color: #ffebee;
-            color: #c0392b;
-            border: 1px solid #e74c3c;
-            padding: 15px;
-        }
-        #ai-response pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: monospace;
-            background-color: #fff;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        
-        /* AI Financial Report Styles */
-        #financial-report-response {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #fafdff;
-            border: 1px solid #ecf0f1;
-            border-radius: 8px;
-            display: none; /* Hidden by default */
-            white-space: pre-wrap; /* Allows formatting from AI */
-        }
-        /* Styles for the AI-generated HTML */
-        #financial-report-response h3 {
-            color: #4A90E2;
-            border-bottom: 1px solid #4A90E2;
-            padding-bottom: 5px;
-        }
-        #financial-report-response ul {
-            list-style-type: disc;
-            padding-left: 20px;
-        }
-        #financial-report-response li {
-            background: none;
-            padding: 5px 0;
-            margin-bottom: 0;
-            border: none;
-            display: list-item;
+        #logout-dropdown {
+            transition: opacity 0.3s ease, transform 0.3s ease;
         }
     </style>
 </head>
-<body>
+<body class="min-h-screen">
 
-    <div class="container">
-        <h1>SpendCount AI 💸</h1>
+    <div id="notification-container" class="fixed top-5 right-5 z-50 w-full max-w-sm space-y-3"></div>
 
-        <div class="budget-summary">
-            <h2>Total Budget</h2>
-            <div class="amount" id="total-budget">$0.00</div>
-        </div>
-
-        <div class="tabs">
-            <button class="tab-link active" onclick="openTab(event, 'dashboard')">Dashboard</button>
-            <button class="tab-link" onclick="openTab(event, 'add')">Add</button>
-            <button class="tab-link" onclick="openTab(event, 'plan')">Plan</button>
-            <button class="tab-link" onclick="openTab(event, 'scan')">Scan AI</button>
-            <button class="tab-link" onclick="openTab(event, 'ai-insights')">AI Insights</button>
-        </div>
-
-        <div id="dashboard" class="tab-content active">
-            
-            <h3>Recurring Expenses for This Month</h3>
-            <ul id="recurring-suggestions-list">
-                </ul>
-
-            <hr>
-
-            <div class="form-group">
-                <h3>Set Category Budgets</h3>
-                <form id="category-budget-form">
-                    <div class="form-group">
-                        <label for="budget-category">Category:</label>
-                        <select id="budget-category" required>
-                            <option value="Food">Food</option>
-                            <option value="Transport">Transport</option>
-                            <option value="Utilities">Utilities</option>
-                            <option value="Rent">Rent</option>
-                            <option value="Entertainment">Entertainment</option>
-                            <option value="Shopping">Shopping</option>
-                            <option value="Health">Health</option>
-                            <option value="Education">Education</option>
-                            <option value="Electronics and Gadget">Electronics and Gadget</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="budget-amount">Amount:</label>
-                        <input type="number" id="budget-amount" min="0" step="0.01" required>
-                    </div>
-                    <button type="submit">Set Budget</button>
-                </form>
-                <ul id="category-budgets-list">
-                    </ul>
+    <div id="loading-spinner" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-[101] transition-opacity duration-300">
+        <svg class="animate-spin h-10 w-10 text-amber-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
+    
+    <div id="login-screen" class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="text-center space-y-6 card-style p-10 rounded-2xl max-w-lg">
+            <div class="flex flex-col items-center justify-center gap-2">
+                <div class="w-20 h-20 bg-amber-800 rounded-full flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wallet-cards"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="M15 3v18"/><path d="M8 12h.01"/></svg>
+                </div>
+                <h1 class="text-4xl md:text-5xl tracking-wider">SpendCount</h1>
+                <p class="text-lg text-amber-800/90 subtitle italic font-semibold mt-1">Don't just pay, Track It.</p>
             </div>
-            
-            <hr>
-
-            <h3>Paid Expenses</h3>
-            <ul id="transactions-list">
-                </ul>
-
-            <hr>
-            
-            <h3>Unpaid Expenses</h3>
-            <ul id="planned-expenses-list">
-                </ul>
+            <p class="text-lg text-gray-600 max-w-md mx-auto subtitle font-medium">Take control of your finances.</p>
+            <button id="google-signin-btn" class="bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 btn-primary w-full flex items-center justify-center gap-3">
+                <svg class="w-5 h-5" viewBox="0 0 48 48" width="48px" height="48px"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C44.438,36.333,48,30.636,48,24c0-3.885-0.58-7.594-1.589-10.966L43.611,20.083z"></path></svg>
+                Sign in with Google
+            </button>
         </div>
-
-        <div id="add" class="tab-content">
-            <h2>Add Transaction</h2>
-            <form id="add-transaction-form">
-                <div class="form-group">
-                    <label for="type">Type:</label>
-                    <select id="type" required>
-                        <option value="Expense">Expense</option>
-                        <option value="Income">Income</option>
-                        <option value="Loan">Loan</option>
-                        <option value="Debt">Debt</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="name">Name:</label>
-                    <input type="text" id="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="amount">Amount:</label>
-                    <input type="number" id="amount" min="0" step="0.01" required>
-                </div>
-                <div class="form-group" id="category-group">
-                    <label for="category">Category:</label>
-                    <select id="category" required>
-                        <option value="Food">Food</option>
-                        <option value="Transport">Transport</option>
-                        <option value="Utilities">Utilities</option>
-                        <option value="Rent">Rent</option>
-                        <option value="Entertainment">Entertainment</option>
-                        <option value="Shopping">Shopping</option>
-                        <option value="Health">Health</option>
-                        <option value="Education">Education</option>
-                        <option value="Electronics and Gadget">Electronics and Gadget</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <button type="submit">Add Transaction</button>
-            </form>
+    </div>
+    
+    <div id="user-profile" class="hidden fixed top-4 right-4 z-40">
+        <div class="relative">
+            <button id="user-avatar-btn" class="block">
+                <img id="user-avatar" class="w-10 h-10 rounded-full border-2 border-amber-700 shadow-lg" src="" alt="User Avatar">
+            </button>
+            <div id="logout-dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl py-1 transform scale-95 opacity-0 pointer-events-none">
+                <div class="px-4 py-2 text-sm text-gray-700 border-b" id="user-name-dropdown"></div>
+                <a href="#" id="logout-btn" class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
+            </div>
         </div>
-
-        <div id="plan" class="tab-content">
-            <h2>Plan a One-Time Expense</h2>
-            <form id="add-planned-expense-form">
-                <div class="form-group">
-                    <label for="planned-name">Name:</label>
-                    <input type="text" id="planned-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="planned-amount">Amount:</label>
-                    <input type="number" id="planned-amount" min="0" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label for="planned-category">Category:</label>
-                    <select id="planned-category" required>
-                        <option value="Food">Food</option>
-                        <option value="Transport">Transport</option>
-                        <option value="Utilities">Utilities</option>
-                        <option value="Rent">Rent</option>
-                        <option value="Entertainment">Entertainment</option>
-                        <option value="Shopping">Shopping</option>
-                        <option value="Health">Health</option>
-                        <option value="Education">Education</option>
-                        <option value="Electronics and Gadget">Electronics and Gadget</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="planned-date">Payment Date:</label>
-                    <input type="date" id="planned-date" required>
-                </div>
-                <button type="submit">Add One-Time Expense</button>
-            </form>
-
-            <hr>
-
-            <h3>Manage Recurring Expenses</h3>
-            <form id="add-recurring-expense-form">
-                <div class="form-group">
-                    <label for="recurring-name">Name (e.g., Netflix, Rent):</label>
-                    <input type="text" id="recurring-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="recurring-amount">Amount:</label>
-                    <input type="number" id="recurring-amount" min="0" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label for="recurring-category">Category:</label>
-                    <select id="recurring-category" required>
-                        <option value="Entertainment">Entertainment</option>
-                        <option value="Rent">Rent</option>
-                        <option valueA="Utilities">Utilities</option>
-                        <option value="Transport">Transport</option>
-                        <option value="Food">Food</option>
-                        <option value="Shopping">Shopping</option>
-                        <option value="Health">Health</option>
-                        <option value="Education">Education</option>
-                        <option value="Electronics and Gadget">Electronics and Gadget</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="recurring-day">Day of Month Due (1-31):</label>
-                    <input type="number" id="recurring-day" min="1" max="31" required>
-                </div>
-                <button type="submit">Add Recurring Expense</button>
-            </form>
-
-            <h3>My Recurring Expense Templates</h3>
-            <ul id="recurring-expenses-list">
-                </ul>
-
-        </div>
-
-        <div id="scan" class="tab-content">
-            <h2>Scan Receipt with AI</h2>
-            <form id="scan-receipt-form">
-                <div class="form-group">
-                    <label for="receipt-image">Upload Receipt Image:</label>
-                    <input type="file" id="receipt-image" accept="image/*" required>
-                </div>
-                <button type="submit">Scan and Analyze</button>
-            </form>
-            <div id="ai-response">
-                </div>
-        </div>
-
-        <div id="ai-insights" class="tab-content">
-            <h2>AI Financial Insights 💡</h2>
-            <p>Get a personalized financial report based on all your app data. The AI will analyze your budget, spending, debts, and recurring expenses to give you actionable advice.</p>
-            <button id="generate-report-btn">Generate My Financial Report</button>
-            
-            <div id="financial-report-response">
-                </div>
-        </div>
-
     </div>
 
-    <script>
-        // --- STATE MANAGEMENT ---
-        let totalBudget = 0;
-        let transactions = [];
-        let plannedExpenses = [];
-        let categoryBudgets = [];
-        let recurringExpenses = []; 
-
-        // --- DOM Elements ---
-        const totalBudgetEl = document.getElementById('total-budget');
-        const transactionsListEl = document.getElementById('transactions-list');
-        const plannedExpensesListEl = document.getElementById('planned-expenses-list');
-        const categoryBudgetsListEl = document.getElementById('category-budgets-list');
-        const typeSelectEl = document.getElementById('type');
-        const categoryGroupEl = document.getElementById('category-group');
-        const recurringExpensesListEl = document.getElementById('recurring-expenses-list');
-        const recurringSuggestionsListEl = document.getElementById('recurring-suggestions-list');
-        const generateReportBtn = document.getElementById('generate-report-btn');
-        const financialReportResponseEl = document.getElementById('financial-report-response');
-
-        // --- Event Listeners ---
-        document.addEventListener('DOMContentLoaded', loadState);
-        document.getElementById('add-transaction-form').addEventListener('submit', addTransaction);
-        document.getElementById('add-planned-expense-form').addEventListener('submit', addPlannedExpense);
-        document.getElementById('category-budget-form').addEventListener('submit', addCategoryBudget);
-        document.getElementById('scan-receipt-form').addEventListener('submit', handleAiScan);
-        typeSelectEl.addEventListener('change', toggleCategory);
-        document.getElementById('add-recurring-expense-form').addEventListener('submit', addRecurringExpense);
-        generateReportBtn.addEventListener('click', handleFinancialReport);
-
-        // --- FUNCTIONS ---
-
-        function openTab(event, tabName) {
-            let i, tabcontent, tablinks;
-            tabcontent = document.getElementsByClassName("tab-content");
-            for (i = 0; i < tabcontent.length; i++) {
-                tabcontent[i].style.display = "none";
-            }
-            tablinks = document.getElementsByClassName("tab-link");
-            for (i = 0; i < tablinks.length; i++) {
-                tablinks[i].className = tablinks[i].className.replace(" active", "");
-            }
-            document.getElementById(tabName).style.display = "block";
-            event.currentTarget.className += " active";
-        }
-
-        function toggleCategory() {
-            const type = typeSelectEl.value;
-            if (type === 'Expense' || type === 'Loan' || type === 'Debt') {
-                categoryGroupEl.style.display = 'block';
-            } else {
-                categoryGroupEl.style.display = 'none';
-            }
-        }
-
-        function addTransaction(event) {
-            event.preventDefault();
-            
-            const type = document.getElementById('type').value;
-            const name = document.getElementById('name').value;
-            const amount = parseFloat(document.getElementById('amount').value);
-            const category = document.getElementById('category').value;
-            const dateTime = new Date();
-
-            const transaction = {
-                id: Date.now(),
-                type,
-                name,
-                amount,
-                category,
-                dateTime: dateTime.toISOString() 
-            };
-
-            transactions.push(transaction);
-
-            // FIX: Add Loan and Debt to total budget
-            if (type === 'Income' || type === 'Loan' || type === 'Debt') {
-                totalBudget += amount;
-            } else if (type === 'Expense') {
-                totalBudget -= amount;
-            }
-
-            // Automatically add Loan/Debt to unpaid expenses
-            if (type === 'Loan' || type === 'Debt') {
-                const plannedExpense = {
-                    id: Date.now() + 1,
-                    name: `${type}: ${name}`,
-                    amount: amount,
-                    category: category,
-                    date: getNextMonthDate(), 
-                    isUnpaid: true,
-                    sourceId: null 
-                };
-                plannedExpenses.push(plannedExpense);
-            }
-
-            updateUI();
-            saveState();
-            event.target.reset();
-            toggleCategory();
-            openTab(event, 'dashboard'); 
-        }
-
-        function getNextMonthDate() {
-            const today = new Date();
-            today.setMonth(today.getMonth() + 1);
-            return today.toISOString().split('T')[0];
-        }
-
-        function addPlannedExpense(event) {
-            event.preventDefault();
-
-            const name = document.getElementById('planned-name').value;
-            const amount = parseFloat(document.getElementById('planned-amount').value);
-            const category = document.getElementById('planned-category').value;
-            const date = document.getElementById('planned-date').value;
-
-            const plannedExpense = {
-                id: Date.now(),
-                name,
-                amount,
-                category,
-                date, 
-                isUnpaid: true,
-                sourceId: null
-            };
-
-            plannedExpenses.push(plannedExpense);
-            
-            updateUI();
-            saveState();
-            event.target.reset();
-            openTab(event, 'dashboard'); 
-        }
-
-        function addCategoryBudget(event) {
-            event.preventDefault();
-            
-            const category = document.getElementById('budget-category').value;
-            const amount = parseFloat(document.getElementById('budget-amount').value);
-
-            const existingBudgetIndex = categoryBudgets.findIndex(b => b.category === category);
-            
-            if (existingBudgetIndex > -1) {
-                categoryBudgets[existingBudgetIndex].amount = amount;
-            } else {
-                categoryBudgets.push({ category, amount });
-            }
-
-            updateUI();
-            saveState();
-            event.target.reset();
-        }
-
-        // --- Recurring Expense Functions ---
-
-        function addRecurringExpense(event) {
-            event.preventDefault();
-
-            const name = document.getElementById('recurring-name').value;
-            const amount = parseFloat(document.getElementById('recurring-amount').value);
-            const category = document.getElementById('recurring-category').value;
-            const day = parseInt(document.getElementById('recurring-day').value);
-
-            const recurringExpense = {
-                id: Date.now(),
-                name,
-                amount,
-                category,
-                day
-            };
-
-            recurringExpenses.push(recurringExpense);
-            
-            updateUI();
-            saveState();
-            event.target.reset();
-        }
-
-        function renderRecurringExpenses() {
-            recurringExpensesListEl.innerHTML = '';
-
-            if (recurringExpenses.length === 0) {
-                recurringExpensesListEl.innerHTML = '<li>No recurring expense templates created yet.</li>';
-                return;
-            }
-
-            recurringExpenses.forEach(r => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <div class="info">
-                        <strong>${r.name}</strong>
-                        <span class="category">${r.category} | Due on Day ${r.day}</span>
-                    </div>
-                    <span class="amount">$${r.amount.toFixed(2)}</span>
-                    <button class="delete-btn" onclick="deleteRecurringExpense(${r.id})">Delete</button>
-                `;
-                recurringExpensesListEl.appendChild(li);
-            });
-        }
-
-        function deleteRecurringExpense(id) {
-            recurringExpenses = recurringExpenses.filter(r => r.id !== id);
-            updateUI();
-            saveState();
-        }
-
-        function renderRecurringSuggestions() {
-            recurringSuggestionsListEl.innerHTML = '';
-            
-            const today = new Date();
-            const currentMonthYear = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}`;
-
-            let suggestionsFound = 0;
-
-            recurringExpenses.forEach(r => {
-                const sourceId = `recur-${r.id}`;
-                
-                const alreadyAdded = plannedExpenses.some(p => 
-                    p.sourceId === sourceId && p.date.startsWith(currentMonthYear)
-                );
-
-                if (!alreadyAdded) {
-                    suggestionsFound++;
-                    const li = document.createElement('li');
-                    li.className = 'suggestion-item';
-                    li.innerHTML = `
-                        <div class="info">${r.name} - $${r.amount.toFixed(2)}</div>
-                        <button class="suggest-btn" onclick="addSuggestedExpense(${r.id})">Add</button>
-                    `;
-                    recurringSuggestionsListEl.appendChild(li);
-                }
-            });
-
-            if (suggestionsFound === 0) {
-                recurringSuggestionsListEl.innerHTML = '<li>All recurring expenses are set for this month!</li>';
-            }
-        }
-
-        function addSuggestedExpense(recurringId) {
-            const template = recurringExpenses.find(r => r.id === recurringId);
-            if (!template) return;
-
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth() + 1;
-            const day = Math.min(template.day, new Date(year, month, 0).getDate());
-            const formattedDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-
-            const plannedExpense = {
-                id: Date.now(),
-                name: template.name,
-                amount: template.amount,
-                category: template.category,
-                date: formattedDate,
-                isUnpaid: true,
-                sourceId: `recur-${template.id}`
-            };
-
-            plannedExpenses.push(plannedExpense);
-            
-            updateUI();
-            saveState();
-        }
-
-        // --- Main App Logic ---
-
-        function checkAndRolloverExpenses() {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); 
-
-            let stateChanged = false;
-
-            plannedExpenses.forEach(expense => {
-                const expenseDate = new Date(expense.date);
-                
-                if (expense.isUnpaid && expenseDate < today) {
-                    const newDate = new Date(expenseDate);
-                    newDate.setMonth(newDate.getMonth() + 1);
-                    expense.date = newDate.toISOString().split('T')[0];
-                    stateChanged = true;
-                }
-            });
-
-            if (stateChanged) {
-                saveState();
-            }
-        }
-
-        function updateUI() {
-            checkAndRolloverExpenses();
-
-            totalBudgetEl.textContent = `$${totalBudget.toFixed(2)}`;
-            
-            renderTransactions();
-            renderPlannedExpenses();
-            renderCategoryBudgets();
-            renderRecurringExpenses();
-            renderRecurringSuggestions();
-        }
-
-        function renderTransactions() {
-            transactionsListEl.innerHTML = '';
-            
-            const paidTransactions = transactions.filter(t => t.type === 'Expense' || t.type === 'Income');
-
-            if (paidTransactions.length === 0) {
-                transactionsListEl.innerHTML = '<li>No paid expenses or income yet.</li>';
-                return;
-            }
-
-            paidTransactions.sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime));
-
-            paidTransactions.forEach(t => {
-                const li = document.createElement('li');
-                li.className = t.type.toLowerCase();
-                
-                const formattedDateTime = new Date(t.dateTime).toLocaleString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-
-                li.innerHTML = `
-                    <div class="info">
-                        <strong>${t.name}</strong>
-                        <span class="category">${t.category || t.type}</span>
-                        <span class="date-time">${formattedDateTime}</span>
-                    </div>
-                    <span class="amount">
-                        ${t.type === 'Expense' ? '-' : '+'}$${t.amount.toFixed(2)}
-                    </span>
-                `;
-                transactionsListEl.appendChild(li);
-            });
-        }
-
-        function renderPlannedExpenses() {
-            plannedExpensesListEl.innerHTML = '';
-
-            if (plannedExpenses.length === 0) {
-                plannedExpensesListEl.innerHTML = '<li>No unpaid expenses.</li>';
-                return;
-            }
-            
-            plannedExpenses.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-            plannedExpenses.forEach(p => {
-                const li = document.createElement('li');
-                li.className = 'planned';
-
-                const formattedDate = new Date(p.date).toLocaleDateString(undefined, {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
-
-                const isOverdue = new Date(p.date) < new Date() && p.isUnpaid;
-                const overdueStyle = isOverdue ? 'style="color: #e74c3c;"' : '';
-
-                li.innerHTML = `
-                    <div class="info">
-                        <strong ${overdueStyle}>${p.name}</strong>
-                        <span class="category">${p.category}</span>
-                        <span class="date-time" ${overdueStyle}>Due: ${formattedDate}</span>
-                    </div>
-                    <span class="amount">$${p.amount.toFixed(2)}</span>
-                    <button class="delete-btn" onclick="deletePlannedExpense(${p.id})">Delete</button>
-                `;
-                plannedExpensesListEl.appendChild(li);
-            });
-        }
-
-        function deletePlannedExpense(id) {
-            plannedExpenses = plannedExpenses.filter(p => p.id !== id);
-            updateUI();
-            saveState();
-        }
-
-        function renderCategoryBudgets() {
-            categoryBudgetsListEl.innerHTML = '';
-
-            if (categoryBudgets.length === 0) {
-                categoryBudgetsListEl.innerHTML = '<li>No category budgets set.</li>';
-                return;
-            }
-
-            categoryBudgets.forEach(budget => {
-                const li = document.createElement('li');
-                li.className = 'category-budget-item';
-
-                const spent = transactions
-                    .filter(t => t.type === 'Expense' && t.category === budget.category)
-                    .reduce((acc, t) => acc + t.amount, 0);
-
-                const remaining = budget.amount - spent;
-                let statusHtml = '';
-                let aiTipHtml = `<div id="ai-tip-${budget.category.replace(/\s+/g, '-')}" class="ai-tip" style="display:none;"></div>`;
-
-                if (remaining < 0) {
-                    const overAmount = Math.abs(remaining);
-                    statusHtml = `<span class="status over-budget">Over by $${overAmount.toFixed(2)}</span>`;
-                    getBudgetAdvice(budget.category, overAmount);
-                } else {
-                    statusHtml = `<span class="status under-budget">$${remaining.toFixed(2)} left</span>`;
-                }
-
-                li.innerHTML = `
-                    <div class="info">
-                        <strong>${budget.category}</strong>
-                        <span class="category">Budget: $${budget.amount.toFixed(2)} | Spent: $${spent.toFixed(2)}</span>
-                    </div>
-                    <div class="status">${statusHtml}</div>
-                    ${aiTipHtml}
-                `;
-                categoryBudgetsListEl.appendChild(li);
-            });
-        }
-
-        async function getBudgetAdvice(category, overAmount) {
-            const tipElementId = `ai-tip-${category.replace(/\s+/g, '-')}`;
-            const tipElement = document.getElementById(tipElementId);
-            
-            if (!tipElement || tipElement.classList.contains('loading') || tipElement.innerHTML !== '') {
-                return;
-            }
-            
-            tipElement.style.display = 'block';
-            tipElement.classList.add('loading');
-            tipElement.innerHTML = '🤖 AI is generating a tip for you...';
-
-            const model = 'gemini-pro';
-            const prompt = {
-                contents: [{
-                    parts: [{
-                        text: `I just overspent by $${overAmount.toFixed(2)} in my "${category}" budget category. Give me one single, short, practical tip (less than 30 words) to help me save money in this specific category.`
-                    }]
-                }]
-            };
-
-            try {
-                const response = await fetch('/api/call-gemini', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model, prompt }),
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to get tip from AI.');
-                }
-
-                const result = await response.json();
-                tipElement.innerHTML = `💡 **AI Tip:** ${result.text}`;
-            
-            } catch (error) {
-                console.error('AI Budget Tip Error:', error);
-                tipElement.innerHTML = 'Could not load AI tip. Check connection.';
-            } finally {
-                tipElement.classList.remove('loading');
-            }
-        }
-
-        // --- AI SCAN FUNCTIONS ---
-        async function handleAiScan(event) {
-            event.preventDefault();
-            const imageInput = document.getElementById('receipt-image');
-            const responseEl = document.getElementById('ai-response');
-
-            if (!imageInput.files || imageInput.files.length === 0) {
-                alert('Please select an image file.');
-                return;
-            }
-
-            const file = imageInput.files[0];
-
-            responseEl.className = 'loading';
-            responseEl.innerHTML = 'Scanning and analyzing receipt... 🤖';
-
-            try {
-                const base64Image = await toBase64(file);
-                const model = 'gemini-1.5-flash';
-                const prompt = {
-                    contents: [{
-                        parts: [
-                            { text: "Analyze this receipt image. Extract the total amount, vendor name, and date. Then, list the items with their prices. Finally, suggest an appropriate expense category (e.g., Food, Transport, Utilities, etc.). Respond ONLY in this exact JSON format: {\"vendor\": \"VendorName\", \"date\": \"YYYY-MM-DD\", \"total\": \"0.00\", \"category\": \"SuggestedCategory\", \"items\": [{\"name\": \"ItemName\", \"price\": \"0.00\"}]}" },
-                            {
-                                inlineData: {
-                                    mimeType: file.type,
-                                    data: base64Image
-                                }
-                            }
-                        ]
-                    }]
-                };
-
-                const response = await fetch('/api/call-gemini', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model, prompt }),
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to analyze image.');
-                }
-
-                const result = await response.json();
-                
-                const jsonText = result.text.replace(/```json|```/g, '').trim();
-                // *** THIS IS THE FIX ***
-                const data = JSON.parse(jsonText);
-
-                responseEl.className = '';
-                responseEl.innerHTML = `
-                    <h3>Scan Result</h3>
-                    <p><strong>Vendor:</strong> ${data.vendor || 'N/A'}</p>
-                    <p><strong>Total:</strong> $${data.total || '0.00'}</p>
-                    <p><strong>Date:</strong> ${data.date || 'N/A'}</p>
-                    <p><strong>Suggested Category:</strong> ${data.category || 'N/A'}</p>
-                    <strong>Items:</strong>
-                    <pre>${(data.items || []).map(item => `- ${item.name}: $${item.price}`).join('\n')}</pre>
-                `;
-
-            } catch (error) {
-                console.error('AI Scan Error:', error);
-                responseEl.className = 'error';
-                responseEl.innerHTML = `<strong>Error:</strong> ${error.message}`;
-            }
-        }
-
-        const toBase64 = file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result.split(',')[1]); 
-            reader.onerror = error => reject(error);
-        });
+    <div id="months-screen" class="hidden max-w-4xl mx-auto p-4 md:p-8 pt-20">
+        <header class="text-center mb-8">
+             <h1 class="text-4xl tracking-wider">My Expense Months</h1>
+             <p class="text-lg text-gray-600 mt-2 subtitle">Select a folder or jump to any month to add expenses.</p>
+             <form id="jump-to-month-form" class="mt-6 max-w-sm mx-auto flex items-center gap-2">
+                 <input type="month" class="input-style" required>
+                 <button type="submit" class="bg-amber-800 hover:bg-amber-900 text-white btn-primary py-2 px-6 flex-shrink-0">Go</button>
+             </form>
+         </header>
+         <div id="month-folders-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+    </div>
+
+    <div id="app-screen" class="hidden max-w-7xl mx-auto p-4 md:p-8 pt-20">
+        <header class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-amber-800 rounded-full flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wallet-cards"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/><path d="M15 3v18"/><path d="M8 12h.01"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-3xl tracking-wider">SpendCount</h1>
+                    <p class="text-xs text-amber-800/90 subtitle italic font-semibold">Don't just pay, Track It.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="back-to-months-btn" class="p-2 text-gray-600 hover:text-amber-800 transition-colors" title="Back to Months">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <div class="flex items-center gap-2">
+                    <label for="month-selector" class="font-bold subtitle text-gray-600">Viewing:</label>
+                    <input type="month" id="month-selector" class="input-style">
+                </div>
+            </div>
+        </header>
         
-        // --- AI Financial Report Function ---
-        async function handleFinancialReport(event) {
-            event.target.disabled = true;
-            financialReportResponseEl.className = 'loading';
-            financialReportResponseEl.innerHTML = '🤖 Analyzing your finances and generating your report... This may take a moment.';
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+            <div class="card-style rounded-xl p-6">
+                <h2 class="text-sm tracking-wide font-semibold text-gray-500 mb-2 subtitle"><span class="font-bold text-amber-800">* </span>TOTAL BUDGET (₹)</h2>
+                <p id="total-budget" class="text-3xl font-bold text-amber-900">₹0.00</p>
+            </div>
+            <div class="card-style rounded-xl p-6">
+                <h2 class="text-sm tracking-wide font-semibold text-gray-500 mb-2 subtitle"><span class="font-bold text-amber-800">* </span>SPENT (₹)</h2>
+                <p id="total-spent" class="text-3xl font-bold text-red-600">₹0.00</p>
+            </div>
+            <div class="card-style rounded-xl p-6">
+                <h2 class="text-sm tracking-wide font-semibold text-gray-500 mb-2 subtitle"><span class="font-bold text-amber-800">* </span>REMAINING (₹)</h2>
+                <p id="remaining-budget" class="text-3xl font-bold text-green-600">₹0.00</p>
+            </div>
+        </div>
 
-            try {
-                // 1. Aggregate all data
-                const summary = buildFinancialSummary();
-                
-                // 2. Create the master prompt
-                const model = 'gemini-pro';
-                const promptText = `
-                    You are a friendly and practical financial advisor. A user has provided a summary of their financial data. Your goal is to give them personalized, actionable advice based *only* on the data provided. Do not give generic advice.
+        <div class="card-style rounded-xl p-6 mb-8">
+            <h3 id="chart-title" class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Category Spending</h3>
+            <div class="relative h-64 md:h-80">
+                <canvas id="expense-chart"></canvas>
+            </div>
+        </div>
 
-                    Here is the user's financial summary:
-                    ${summary}
+         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="card-style rounded-xl p-6">
+                <h3 class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Monthly Budget</h3>
+                 <form id="budget-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input type="text" id="budget-name" placeholder="Source name (e.g., Salary)" class="input-style sm:col-span-2" required>
+                    <input type="number" id="budget-amount" placeholder="Amount (₹)" class="input-style" required>
+                    <select id="budget-type" class="input-style">
+                        <option value="income">Income</option>
+                        <option value="debt">Debt</option>
+                        <option value="loan">Loan</option>
+                        <option value="savings">Savings</option>
+                    </select>
+                    <button type="submit" class="sm:col-span-2 w-full bg-blue-700 hover:bg-blue-800 text-white btn-primary py-2 px-6">Add Budget</button>
+                </form>
+                 <div id="budget-list" class="space-y-2 max-h-40 overflow-y-auto no-scrollbar mt-4"></div>
+            </div>
+             <div class="card-style rounded-xl p-6">
+                <h3 class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Category Spending Limits</h3>
+                <p class="text-gray-600 mb-4">Set spending limits for each category to get alerts when you're about to go over.</p>
+                <button id="set-category-limits-btn" class="bg-purple-700 hover:bg-purple-800 text-white btn-primary py-2 px-6">Set Category Limits</button>
+                <div id="limit-exceeded-list" class="mt-4 space-y-2"></div>
+            </div>
+        </div>
 
-                    Please analyze this data and answer the following three questions. Format your response in simple HTML. Use <h3> for the three main questions as headings, and <ul> with <li> for bullet points.
+        <div class="card-style rounded-xl p-6 mb-8">
+             <h3 class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Add New Expense</h3>
+             <form id="expense-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <input type="text" id="expense-name" placeholder="Expense name" class="input-style sm:col-span-2 lg:col-span-4" required>
+                 <input type="number" id="expense-amount" placeholder="Amount (₹)" class="input-style" required>
+                 <select id="expense-category" class="input-style" required></select>
+                 <input type="date" id="expense-date" class="input-style" required>
+                 <div class="grid grid-cols-3 gap-2">
+                     <select id="expense-hour" class="input-style" required></select>
+                     <select id="expense-minute" class="input-style" required></select>
+                     <select id="expense-ampm" class="input-style" required>
+                         <option value="AM">AM</option>
+                         <option value="PM">PM</option>
+                     </select>
+                 </div>
+                 <button type="submit" class="sm:col-span-2 lg:col-span-4 w-full bg-green-700 hover:bg-green-800 text-white btn-primary py-2 px-6">Save Expense</button>
+             </form>
+        </div>
+        
+        <div class="card-style rounded-xl p-6 mb-8">
+             <div class="flex items-center gap-3 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-800"><path d="m12 8 2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5z"/><path d="M20 3h-2"/><path d="M22 5v-2"/><path d="m2.5 15.5 1.5 1.5"/><path d="M20 21h2"/><path d="M22 19v2"/><path d="m15.5 2.5 1.5-1.5"/><path d="m4 3h2"/><path d="M2 5V3"/><path d="M4 21H2"/><path d="M2 19v-2"/></svg>
+                <h3 class="text-2xl"><span class="font-bold text-amber-800">* </span>AI-Powered Features</h3>
+            </div>
 
-                    1.  Based on my spending, what are my top 3 specific opportunities to save money?
-                    2.  How can I align my spending with my budget? (Look at my income vs. expenses, and my spending vs. my category budgets).
-                    3.  What financial precautions should I take in the near future? (Look at my upcoming unpaid expenses, loans, and debts).
-                `;
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-xl font-bold mb-3"><span class="font-bold text-amber-800">* </span>Scan Receipt or Bill</h4>
+                    <div class="flex gap-2">
+                        <label for="receiptUploader" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <svg class="w-8 h-8 mb-2 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg>
+                                <p class="text-sm text-gray-500"><span class="font-semibold">Upload Image</span></p>
+                            </div>
+                            <input id="receiptUploader" type="file" class="hidden" accept="image/png, image/jpeg, image/webp" />
+                        </label>
+                        <button id="openCameraButton" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 mb-2 text-gray-500"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                                <p class="text-sm text-gray-500"><span class="font-semibold">Use Camera</span></p>
+                            </div>
+                        </button>
+                    </div>
+                    <div id="imagePreviewContainer" class="hidden text-center mt-4">
+                        <img id="imagePreview" class="max-h-40 mx-auto rounded-lg shadow-md" alt="Receipt Preview"/>
+                    </div>
+                    <div id="scanLoader" class="hidden mx-auto mt-4 loader"></div>
+                    <div id="scanResult" class="mt-4"></div>
+                    <div id="scanError" class="hidden mt-4 text-red-600 bg-red-100 p-3 rounded-lg text-sm"></div>
+                </div>
 
-                const prompt = {
-                    contents: [{ parts: [{ text: promptText }] }]
+                <div>
+                    <h4 class="text-xl font-bold mb-3"><span class="font-bold text-amber-800">* </span>Your AI Financial Insights</h4>
+                    <p class="text-gray-600 text-sm mb-4">Get a detailed analysis of your spending habits, limit adherence, and monthly goals.</p>
+                    <button id="analyzeButton" class="w-full bg-teal-700 hover:bg-teal-800 text-white btn-primary py-2 px-6">Get Insights</button>
+                    <div id="analyzeLoader" class="hidden mx-auto mt-4 loader"></div>
+                    <div id="analysisResult" class="mt-4 bg-gray-50 p-4 rounded-lg hidden border-2 border-transparent bg-clip-border" style="background-image: linear-gradient(white, white), linear-gradient(to right, #fde68a, #92400e); border-radius: 0.75rem;"></div>
+                    <div id="analyzeError" class="hidden mt-4 text-red-600 bg-red-100 p-3 rounded-lg text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="card-style rounded-xl p-6">
+                <h3 id="upcoming-expenses-title" class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Unpaid Planned Expenses</h3>
+                <div id="upcoming-expenses-list" class="space-y-3 max-h-96 overflow-y-auto no-scrollbar">
+                    <p id="no-upcoming" class="text-gray-500 text-center py-4 subtitle">No unpaid expenses.</p>
+                </div>
+            </div>
+            <div class="card-style rounded-xl p-6">
+                <h3 id="paid-expenses-title" class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Paid Expenses History</h3>
+                <div id="paid-expenses-list" class="space-y-3 max-h-96 overflow-y-auto no-scrollbar">
+                    <p id="no-paid" class="text-gray-500 text-center py-4 subtitle">No paid expenses yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-style rounded-xl p-6 mt-8">
+            <h3 class="text-2xl mb-4"><span class="font-bold text-amber-800">* </span>Important Notes for the Month</h3>
+            <form id="notes-form" class="flex items-start gap-4 mb-4">
+                <textarea id="note-input" placeholder="Add a note..." class="input-style min-h-[40px] resize-y" rows="1" required></textarea>
+                <button type="submit" class="bg-sky-700 hover:bg-sky-800 text-white btn-primary py-2 px-6 flex-shrink-0">Save Note</button>
+            </form>
+            <div id="notes-list" class="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
+                <p id="no-notes" class="text-gray-500 text-center py-4 subtitle">No important notes for this month.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="category-limits-modal" class="hidden fixed inset-0 z-[100] bg-black bg-opacity-60 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-lg w-full card-style">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-2xl"><span class="font-bold text-amber-800">* </span>Set Category Limits</h3>
+                <button id="close-limits-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl font-bold">&times;</button>
+            </div>
+            <div id="category-limits-form-container" class="space-y-3 max-h-80 overflow-y-auto no-scrollbar pr-2">
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="save-limits-btn" class="bg-purple-700 hover:bg-purple-800 text-white btn-primary py-2 px-6">Save Limits</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="camera-modal" class="hidden fixed inset-0 z-[100] bg-black bg-opacity-80 flex items-center justify-center p-4">
+        <div class="bg-white p-4 rounded-xl shadow-2xl max-w-2xl w-full card-style relative">
+            <video id="camera-feed" class="w-full h-auto rounded-lg" autoplay playsinline></video>
+            <div class="flex justify-center mt-4 gap-4">
+                 <button id="capture-btn" class="p-4 bg-blue-700 hover:bg-blue-800 text-white rounded-full transition-colors" title="Capture Image">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                 </button>
+            </div>
+            <button id="close-camera-modal-btn" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-1 text-2xl leading-none">&times;</button>
+        </div>
+    </div>
+    <canvas id="capture-canvas" class="hidden"></canvas>
+
+    <script>
+        // --- FIREBASE INITIALIZATION ---
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+        (function() {
+            // --- DOM Elements ---
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const loginScreen = document.getElementById('login-screen');
+            const googleSigninBtn = document.getElementById('google-signin-btn');
+            const monthsScreen = document.getElementById('months-screen');
+            const appScreen = document.getElementById('app-screen');
+            const userProfileSection = document.getElementById('user-profile');
+            const userAvatarBtn = document.getElementById('user-avatar-btn');
+            const userAvatar = document.getElementById('user-avatar');
+            const userNameDropdown = document.getElementById('user-name-dropdown');
+            const logoutBtn = document.getElementById('logout-btn');
+            const logoutDropdown = document.getElementById('logout-dropdown');
+            const notificationContainer = document.getElementById('notification-container');
+            const monthFoldersList = document.getElementById('month-folders-list');
+            const jumpToMonthForm = document.getElementById('jump-to-month-form');
+            const backToMonthsBtn = document.getElementById('back-to-months-btn');
+            const monthSelector = document.getElementById('month-selector');
+            const totalBudgetEl = document.getElementById('total-budget');
+            const totalSpentEl = document.getElementById('total-spent');
+            const remainingBudgetEl = document.getElementById('remaining-budget');
+            const budgetForm = document.getElementById('budget-form');
+            const budgetNameInput = document.getElementById('budget-name');
+            const budgetAmountInput = document.getElementById('budget-amount');
+            const budgetTypeSelect = document.getElementById('budget-type');
+            const budgetList = document.getElementById('budget-list');
+            const expenseForm = document.getElementById('expense-form');
+            const expenseNameInput = document.getElementById('expense-name');
+            const expenseAmountInput = document.getElementById('expense-amount');
+            const expenseCategorySelect = document.getElementById('expense-category');
+            const expenseDateInput = document.getElementById('expense-date');
+            const expenseHourInput = document.getElementById('expense-hour');
+            const expenseMinuteInput = document.getElementById('expense-minute');
+            const expenseAmpmInput = document.getElementById('expense-ampm');
+            const upcomingList = document.getElementById('upcoming-expenses-list');
+            const paidList = document.getElementById('paid-expenses-list');
+            const upcomingTitleEl = document.getElementById('upcoming-expenses-title');
+            const paidTitleEl = document.getElementById('paid-expenses-title');
+            const notesForm = document.getElementById('notes-form');
+            const noteInput = document.getElementById('note-input');
+            const notesList = document.getElementById('notes-list');
+            const chartCanvas = document.getElementById('expense-chart');
+            const chartTitleEl = document.getElementById('chart-title');
+            const receiptUploader = document.getElementById('receiptUploader');
+            const scanLoader = document.getElementById('scanLoader');
+            const scanResult = document.getElementById('scanResult');
+            const scanError = document.getElementById('scanError');
+            const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+            const imagePreview = document.getElementById('imagePreview');
+            const analyzeButton = document.getElementById('analyzeButton');
+            const analyzeLoader = document.getElementById('analyzeLoader');
+            const analysisResult = document.getElementById('analysisResult');
+            const analyzeError = document.getElementById('analyzeError');
+            const setCategoryLimitsBtn = document.getElementById('set-category-limits-btn');
+            const categoryLimitsModal = document.getElementById('category-limits-modal');
+            const closeLimitsModalBtn = document.getElementById('close-limits-modal-btn');
+            const saveLimitsBtn = document.getElementById('save-limits-btn');
+            const categoryLimitsFormContainer = document.getElementById('category-limits-form-container');
+            const openCameraButton = document.getElementById('openCameraButton');
+            const cameraModal = document.getElementById('camera-modal');
+            const cameraFeed = document.getElementById('camera-feed');
+            const captureBtn = document.getElementById('capture-btn');
+            const closeCameraModalBtn = document.getElementById('close-camera-modal-btn');
+            const captureCanvas = document.getElementById('capture-canvas');
+            const limitExceededList = document.getElementById('limit-exceeded-list');
+
+            // --- Global Variables ---
+            let currentUser = null;
+            let selectedYearMonth = '';
+            let expenseChart = null;
+            let currentBudgets = [];
+            let currentExpenses = [];
+            let currentNotes = [];
+            let currentCategoryLimits = {};
+
+            const CATEGORIES = ['Shopping', 'Bills', 'Restaurant', 'Cafe or Stall', 'Home Groceries', 'Entertainment', 'Transport', 'Hospital', 'Fitness', 'Education', 'Miscellaneous Expenses'];
+            const categoryIcons = {
+                Shopping: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-amber-700"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`,
+                Bills: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-orange-700"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
+                Restaurant: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-orange-700"><path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8Z"/><path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 1.6.7 2.3 0l2.3-2.3"/><path d="M3 21v-4.1l4.1-4.1"/><path d="M22 3 8.7 16.3A5 5 0 0 1 3 16.3V21h4.7a5 5 0 0 1 3.5-1.5L21 8"/></svg>`,
+                'Cafe or Stall': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-yellow-700"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>`,
+                'Home Groceries': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-green-700"><path d="m5 11 4-7"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.5 11 1.6 7.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6l1.6-7.4"/><path d="m9 11 1 9"/><path d="M4.5 15.5h15"/></svg>`,
+                Entertainment: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-red-700"><path d="m12 8 2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5z"/><path d="M20 3h-2"/><path d="M22 5v-2"/><path d="m2.5 15.5 1.5 1.5"/><path d="M20 21h2"/><path d="M22 19v2"/><path d="m15.5 2.5 1.5-1.5"/><path d="m4 3h2"/><path d="M2 5V3"/><path d="M4 21H2"/><path d="M2 19v-2"/></svg>`,
+                Transport: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-teal-700"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v1"/><path d="M16 17H5c-1.1 0-2-.9-2-2V7c0-1.1.9-2 2-2h8c.7 0 1.3.3 1.8.7l1.9 1.9c.5.4.9 1.1 1.3 1.9.4.8 2.2 1.9 2.2 1.9V17Z"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`,
+                Hospital: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-red-700"><path d="M18 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>`,
+                Fitness: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-lime-700"><path d="M5 9H4a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1"/><path d="M19 9h1a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-1"/><path d="M15 9h-6v6h6z"/></svg>`,
+                Education: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-indigo-700"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+                'Miscellaneous Expenses': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-600"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
+            };
+            
+            // --- AUTHENTICATION LOGIC ---
+            googleSigninBtn.addEventListener('click', () => {
+                auth.signInWithPopup(googleProvider)
+                    .catch((error) => {
+                        console.error("Google Sign-In Error:", error);
+                        showNotification('Could not sign in with Google. Please try again.', 'error');
+                    });
+            });
+
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                auth.signOut();
+            });
+            
+            userAvatarBtn.addEventListener('click', () => {
+                logoutDropdown.classList.toggle('opacity-0');
+                logoutDropdown.classList.toggle('scale-95');
+                logoutDropdown.classList.toggle('pointer-events-none');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!userProfileSection.contains(e.target)) {
+                    logoutDropdown.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                }
+            });
+
+            auth.onAuthStateChanged(user => {
+                setTimeout(() => loadingSpinner.classList.add('opacity-0', 'pointer-events-none'), 500);
+                if (user) {
+                    currentUser = user;
+                    userAvatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'User'}&background=a9a29e&color=fff`;
+                    userNameDropdown.textContent = user.displayName || 'Welcome!';
+                    userProfileSection.classList.remove('hidden');
+                    loginScreen.classList.add('hidden');
+                    monthsScreen.classList.remove('hidden');
+                    appScreen.classList.add('hidden');
+                    renderMonthFolders(); 
+                } else {
+                    currentUser = null;
+                    userProfileSection.classList.add('hidden');
+                    loginScreen.classList.remove('hidden');
+                    monthsScreen.classList.add('hidden');
+                    appScreen.classList.add('hidden');
+                }
+            });
+
+            // --- UPDATED LOCALSTORAGE FUNCTIONS ---
+            const getBaseKey = (key, yearMonth) => {
+                if (!currentUser) throw new Error("User not logged in");
+                return `${key}_${currentUser.uid}_${yearMonth}`;
+            }
+
+            const getBudgetsKey = (yearMonth) => getBaseKey('budgets', yearMonth);
+            const getExpensesKey = (yearMonth) => getBaseKey('expenses', yearMonth);
+            const getNotesKey = (yearMonth) => getBaseKey('notes', yearMonth);
+            const getCategoryLimitsKey = (yearMonth) => getBaseKey('categoryLimits', yearMonth);
+            const getOverBudgetAlertKey = (yearMonth) => getBaseKey('overBudgetAlertShown', yearMonth);
+            
+            const loadData = (key, defaultValue) => {
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : defaultValue;
+            };
+            const saveData = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+            
+            const loadBudgets = (yearMonth) => loadData(getBudgetsKey(yearMonth), []);
+            const saveBudgets = (yearMonth, budgets) => saveData(getBudgetsKey(yearMonth), budgets);
+            const loadExpenses = (yearMonth) => loadData(getExpensesKey(yearMonth), []);
+            const saveExpenses = (yearMonth, expenses) => saveData(getExpensesKey(yearMonth), expenses);
+            const loadNotes = (yearMonth) => loadData(getNotesKey(yearMonth), []);
+            const saveNotes = (yearMonth, notes) => saveData(getNotesKey(yearMonth), notes);
+            const loadCategoryLimits = (yearMonth) => loadData(getCategoryLimitsKey(yearMonth), {});
+            const saveCategoryLimits = (yearMonth, limits) => saveData(getCategoryLimitsKey(yearMonth), limits);
+
+            // --- ALL YOUR ORIGINAL JAVASCRIPT FUNCTIONS AND EVENT LISTENERS ---
+            
+            function showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                let bgColor = 'bg-blue-500';
+                if (type === 'success') bgColor = 'bg-green-500';
+                if (type === 'error') bgColor = 'bg-red-500';
+                if (type === 'warning') bgColor = 'bg-yellow-500';
+
+                notification.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full opacity-0`;
+                notification.innerHTML = `<div class="flex items-center justify-between"><span>${message}</span><button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">×</button></div>`;
+                notificationContainer.appendChild(notification);
+                setTimeout(() => notification.classList.remove('translate-x-full', 'opacity-0'), 100);
+                setTimeout(() => {
+                    if (notification.parentElement) {
+                        notification.classList.add('translate-x-full', 'opacity-0');
+                        setTimeout(() => notification.remove(), 5000);
+                    }
+                }, 5000);
+            }
+
+            function showConfirmationModal(message, onConfirm) {
+                document.getElementById('confirmation-modal')?.remove();
+                const modal = document.createElement('div');
+                modal.id = 'confirmation-modal';
+                modal.className = 'fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center p-4';
+                modal.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full card-style">
+                        <p class="text-lg font-semibold mb-4 text-gray-800">${message}</p>
+                        <div class="flex justify-end space-x-3">
+                            <button id="modal-cancel" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition-colors">Cancel</button>
+                            <button id="modal-confirm" class="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors">Confirm</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+                document.getElementById('modal-cancel').onclick = () => modal.remove();
+                document.getElementById('modal-confirm').onclick = () => {
+                    onConfirm();
+                    modal.remove();
                 };
+            }
 
-                // 3. Call the API
+            function showSwitchMonthModal(message, onConfirm) {
+                document.getElementById('confirmation-modal')?.remove();
+                const modal = document.createElement('div');
+                modal.id = 'confirmation-modal';
+                modal.className = 'fixed inset-0 z-[100] bg-black bg-opacity-50 flex items-center justify-center p-4';
+                modal.innerHTML = `
+                    <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full card-style">
+                        <p class="text-lg font-semibold mb-4 text-gray-800">${message}</p>
+                        <div class="flex justify-end space-x-3">
+                            <button id="modal-cancel" class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium transition-colors">Stay Here</button>
+                            <button id="modal-confirm" class="px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors">Switch Month</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+                document.getElementById('modal-cancel').onclick = () => modal.remove();
+                document.getElementById('modal-confirm').onclick = () => {
+                    onConfirm();
+                    modal.remove();
+                };
+            }
+
+            function formatCurrency(amount) {
+                return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount || 0);
+            }
+
+            function getRelativeDueDate(dueDateString) {
+                if (!dueDateString) return 'No due date';
+                const now = new Date();
+                const dueDate = new Date(dueDateString);
+                if (isNaN(dueDate)) return 'Invalid date';
+
+                const diffTime = dueDate.getTime() - now.getTime();
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const dueDay = new Date(dueDateString);
+                dueDay.setHours(0, 0, 0, 0);
+                const dayDiff = Math.round((dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                const timeFormat = { hour: '2-digit', minute: '2-digit' };
+                if (diffTime < 0) { return `<span class="text-red-500 font-semibold">Overdue</span>`; }
+                if (dayDiff === 0) { return `Due <span class="font-semibold text-orange-500">today</span> at ${dueDate.toLocaleTimeString([], timeFormat)}`; }
+                if (dayDiff === 1) { return `Due <span class="font-semibold text-yellow-500">tomorrow</span> at ${dueDate.toLocaleTimeString([], timeFormat)}`; }
+                if (dayDiff > 1 && dayDiff <= 7) { return `Due in <span class="font-semibold text-cyan-600">${dayDiff} days</span> (${dueDate.toLocaleDateString([], { weekday: 'short' })})`; }
+                return `Due: ${dueDate.toLocaleDateString()} ${dueDate.toLocaleTimeString([], timeFormat)}`;
+            }
+            
+            function populateTimeDropdowns() {
+                expenseHourInput.innerHTML = '';
+                for (let i = 1; i <= 12; i++) {
+                    expenseHourInput.insertAdjacentHTML('beforeend', `<option value="${i}">${i}</option>`);
+                }
+                expenseMinuteInput.innerHTML = '';
+                for (let i = 0; i < 60; i++) {
+                    const minute = i.toString().padStart(2, '0');
+                    expenseMinuteInput.insertAdjacentHTML('beforeend', `<option value="${minute}">${minute}</option>`);
+                }
+            }
+
+            function populateCategoryDropdown() {
+                expenseCategorySelect.innerHTML = '';
+                CATEGORIES.forEach(cat => {
+                    expenseCategorySelect.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`);
+                });
+            }
+
+            function renderMonthFolders() {
+                monthFoldersList.innerHTML = '';
+                document.getElementById('no-months-msg')?.remove();
+                const allMonths = getAllMonthsWithData();
+                if (allMonths.length === 0) {
+                     monthFoldersList.insertAdjacentHTML('afterend', '<p id="no-months-msg" class="text-gray-500 text-center col-span-full">No expenses saved yet. Use the selector above to start.</p>');
+                }
+
+                allMonths.forEach(yearMonth => {
+                    const expenses = loadExpenses(yearMonth);
+                    const totalSpent = expenses.filter(exp => exp.paid).reduce((sum, exp) => sum + exp.amount, 0);
+                    const monthName = new Date(yearMonth + '-02').toLocaleString('default', { month: 'long' });
+                    const year = yearMonth.split('-')[0];
+                    const folderHTML = `
+                        <div class="month-folder card-style rounded-xl text-center transition-transform duration-300 flex flex-col" data-year-month="${yearMonth}">
+                            <div class="p-6 cursor-pointer transform hover:scale-105 flex-grow">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                                <h3 class="text-xl font-bold text-amber-900">${monthName} ${year}</h3>
+                                <p class="text-gray-600">Spent: ${formatCurrency(totalSpent)}</p>
+                            </div>
+                            <div class="border-t border-gray-200 p-2">
+                                <button class="delete-month-btn w-full text-red-600 hover:bg-red-50 rounded-md p-1 text-sm font-semibold transition-colors">
+                                    Delete Month
+                                </button>
+                            </div>
+                        </div>`;
+                    monthFoldersList.insertAdjacentHTML('beforeend', folderHTML);
+                });
+            }
+            
+            function deleteMonthData(yearMonth) {
+                const monthName = new Date(yearMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
+                showConfirmationModal(`Are you sure? This will permanently delete all data for ${monthName}.`, () => {
+                    localStorage.removeItem(getBudgetsKey(yearMonth));
+                    localStorage.removeItem(getExpensesKey(yearMonth));
+                    localStorage.removeItem(getNotesKey(yearMonth));
+                    localStorage.removeItem(getCategoryLimitsKey(yearMonth));
+                    localStorage.removeItem(getOverBudgetAlertKey(yearMonth));
+                    renderMonthFolders();
+                    showNotification(`All data for ${monthName} has been deleted.`, 'success');
+                });
+            }
+
+            function initializeChart() {
+                if (expenseChart) expenseChart.destroy();
+                const ctx = chartCanvas.getContext('2d');
+                expenseChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#92400e', '#ea580c', '#eab308', '#65a30d', '#059669', '#0891b2', '#2563eb', '#c2410c', '#6b7280', '#4f46e5', '#dc2626'], borderWidth: 0, hoverOffset: 10 }] },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { 
+                            legend: { 
+                                position: 'bottom', 
+                                labels: { 
+                                    padding: 20, 
+                                    usePointStyle: true, 
+                                    font: { 
+                                        size: 16,
+                                        weight: 'bold'
+                                    } 
+                                } 
+                            } 
+                        } 
+                    }
+                });
+            }
+
+            function updateChart(expenses) {
+                const categoryTotals = {};
+                expenses.filter(expense => expense.paid).forEach(expense => {
+                    categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
+                });
+                const categories = Object.keys(categoryTotals);
+                const amounts = Object.values(categoryTotals);
+                if (categories.length === 0) {
+                    expenseChart.data.labels = ['No paid expenses yet'];
+                    expenseChart.data.datasets[0].data = [1];
+                    expenseChart.data.datasets[0].backgroundColor = ['#e5e7eb'];
+                } else {
+                    expenseChart.data.labels = categories;
+                    expenseChart.data.datasets[0].data = amounts;
+                    expenseChart.data.datasets[0].backgroundColor = ['#92400e', '#ea580c', '#eab308', '#65a30d', '#059669', '#0891b2', '#2563eb', '#c2410c', '#6b7280', '#4f46e5', '#dc2626'];
+                }
+                expenseChart.update();
+            }
+
+            function updateAllDisplays() {
+                updateSummaryDisplay();
+                updateBudgetList();
+                updateExpenseLists();
+                updateNotesList();
+                updateChart(currentExpenses);
+                updateLimitExceededDisplay();
+            }
+            
+            function updateLimitExceededDisplay() {
+                const overspentCategories = [];
+                for (const category in currentCategoryLimits) {
+                    const limit = currentCategoryLimits[category];
+                    const spentSoFar = currentExpenses
+                        .filter(exp => exp.paid && exp.category === category)
+                        .reduce((sum, exp) => sum + exp.amount, 0);
+
+                    if (spentSoFar > limit) {
+                        overspentCategories.push({ name: category, spent: spentSoFar, limit: limit });
+                    }
+                }
+
+                if (overspentCategories.length > 0) {
+                    limitExceededList.innerHTML = overspentCategories.map(cat => `
+                        <div class="flex justify-between items-center text-sm p-2 bg-red-50 rounded-md">
+                            <span class="font-semibold text-red-800">${cat.name}</span>
+                            <span class="text-red-600">Spent ${formatCurrency(cat.spent)} of ${formatCurrency(cat.limit)}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    limitExceededList.innerHTML = '<p class="text-sm text-green-600 text-center py-2">All categories are within budget!</p>';
+                }
+            }
+
+            function updateSummaryDisplay() {
+                const totalFunds = currentBudgets.reduce((sum, budget) => sum + budget.amount, 0);
+                const totalSpent = currentExpenses.filter(expense => expense.paid).reduce((sum, expense) => sum + expense.amount, 0);
+                const remaining = totalFunds - totalSpent;
+                
+                totalBudgetEl.textContent = formatCurrency(totalFunds);
+                totalSpentEl.textContent = formatCurrency(totalSpent);
+                remainingBudgetEl.textContent = formatCurrency(remaining);
+                remainingBudgetEl.className = 'text-3xl font-bold ' + (remaining < 0 ? 'text-red-600' : remaining < totalFunds * 0.2 ? 'text-yellow-600' : 'text-green-600');
+
+                if (remaining < 0 && !loadData(getOverBudgetAlertKey(selectedYearMonth), false)) {
+                    showNotification("ALERT: You have gone over your total monthly budget!", 'error');
+                    saveData(getOverBudgetAlertKey(selectedYearMonth), true);
+                }
+            }
+
+            function updateBudgetList() {
+                budgetList.innerHTML = '';
+                if (currentBudgets.length === 0) {
+                    budgetList.innerHTML = '<p class="text-gray-500 text-center text-sm py-2 subtitle">No budget added yet.</p>';
+                    return;
+                }
+                
+                currentBudgets.forEach(budget => {
+                    let bgColor = 'bg-blue-50';
+                    let textColor = 'text-blue-700';
+                    if(budget.type === 'savings') { bgColor = 'bg-green-50'; textColor = 'text-green-700'; }
+                    if(budget.type === 'debt' || budget.type === 'loan') { bgColor = 'bg-red-50'; textColor = 'text-red-700'; }
+
+                    budgetList.insertAdjacentHTML('beforeend', `
+                    <div class="flex items-center justify-between p-2 ${bgColor} rounded-lg">
+                        <p class="text-gray-800">${budget.name} <span class="text-xs italic">(${budget.type})</span></p>
+                        <div class="flex items-center gap-3">
+                           <p class="font-semibold ${textColor}">${formatCurrency(budget.amount)}</p>
+                           <button onclick="deleteBudget('${budget.id}')" class="p-1 text-red-500 hover:text-red-700 font-bold">&times;</button>
+                        </div>
+                    </div>`);
+                });
+            }
+            
+            function updateExpenseLists() {
+                const paid = currentExpenses.filter(expense => expense.paid).sort((a, b) => new Date(b.paidDate) - new Date(a.paidDate));
+                const unpaid = currentExpenses.filter(expense => !expense.paid).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+                
+                upcomingList.innerHTML = unpaid.length === 0 ? '<p class="text-gray-500 text-center py-4 subtitle">No unpaid expenses.</p>' : unpaid.map(expense => `
+                    <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg border-l-4 border-amber-500">
+                        <div class="flex items-start gap-3 flex-grow">
+                            <div class="flex-shrink-0">${categoryIcons[expense.category] || categoryIcons["Miscellaneous Expenses"]}</div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">${expense.name}</h4>
+                                <p class="text-sm text-gray-600">${expense.category}</p>
+                                <p class="text-sm text-gray-500">${getRelativeDueDate(expense.dueDate)}</p>
+                            </div>
+                        </div>
+                        <div class="text-right ml-2 flex-shrink-0">
+                            <p class="font-bold text-amber-900">${formatCurrency(expense.amount)}</p>
+                            <button onclick="markExpenseAsPaid('${expense.id}')" class="mt-2 p-2 bg-green-600 hover:bg-green-700 text-white rounded-full transition-colors" title="Mark as Paid">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><path d="M20 6 9 17l-5-5"/></svg>
+                            </button>
+                        </div>
+                    </div>`).join('');
+
+                paidList.innerHTML = paid.length === 0 ? '<p class="text-gray-500 text-center py-4 subtitle">No paid expenses yet.</p>' : paid.map(expense => `
+                    <div class="flex items-start justify-between p-4 bg-gray-50 rounded-lg border-l-4 border-green-500">
+                        <div class="flex items-start gap-3 flex-grow">
+                            <div class="flex-shrink-0">${categoryIcons[expense.category] || categoryIcons["Miscellaneous Expenses"]}</div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">${expense.name}</h4>
+                                <p class="text-sm text-gray-600">${expense.category}</p>
+                                <p class="text-sm text-green-600">Paid on ${new Date(expense.paidDate).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                         <div class="text-right ml-2 flex-shrink-0">
+                            <p class="font-bold text-green-700">${formatCurrency(expense.amount)}</p>
+                            <button onclick="deleteExpense('${expense.id}')" class="mt-2 p-2 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors" title="Delete Expense">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"></path></svg>
+                            </button>
+                        </div>
+                    </div>`).join('');
+
+                upcomingTitleEl.textContent = `Unpaid Planned Expenses (${unpaid.length})`;
+                paidTitleEl.textContent = `Paid Expenses History (${paid.length})`;
+            }
+
+            function updateNotesList() {
+                notesList.innerHTML = currentNotes.length === 0 ? '<p class="text-gray-500 text-center py-4 subtitle">No important notes for this month.</p>' : currentNotes.map(note => `
+                    <div class="flex items-start justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-sky-500">
+                        <div class="flex-grow">
+                            <p class="text-gray-800">${note.text}</p>
+                            <p class="text-xs text-gray-500 mt-1">Added on ${new Date(note.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <button onclick="deleteNote('${note.id}')" class="ml-3 p-1 bg-red-600 hover:bg-red-700 text-white rounded transition-colors flex-shrink-0" title="Delete Note">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"></path></svg>
+                        </button>
+                    </div>`).join('');
+            }
+
+            function loadMonthData(yearMonth) {
+                currentBudgets = loadBudgets(yearMonth);
+                currentExpenses = loadExpenses(yearMonth);
+                currentNotes = loadNotes(yearMonth);
+                currentCategoryLimits = loadCategoryLimits(yearMonth);
+                updateAllDisplays();
+                chartTitleEl.textContent = `Category Spending for ${new Date(yearMonth + '-02').toLocaleDateString([], { month: 'long', year: 'numeric' })}`;
+            }
+
+            function deleteBudget(budgetId) {
+                 showConfirmationModal('Are you sure you want to delete this budget entry?', () => {
+                    currentBudgets = currentBudgets.filter(b => b.id !== budgetId);
+                    saveBudgets(selectedYearMonth, currentBudgets);
+                    updateAllDisplays();
+                    showNotification('Budget entry deleted!', 'success');
+                });
+            }
+
+            function markExpenseAsPaid(expenseId) {
+                const expense = currentExpenses.find(exp => exp.id === expenseId);
+                if (expense) {
+                    expense.paid = true;
+                    expense.paidDate = new Date().toISOString();
+                    saveExpenses(selectedYearMonth, currentExpenses);
+                    updateAllDisplays();
+                    showNotification(`"${expense.name}" marked as paid!`, 'success');
+                }
+            }
+
+            function deleteExpense(expenseId) {
+                showConfirmationModal('Are you sure you want to delete this expense?', () => {
+                    currentExpenses = currentExpenses.filter(exp => exp.id !== expenseId);
+                    saveExpenses(selectedYearMonth, currentExpenses);
+                    updateAllDisplays();
+                    showNotification('Expense deleted!', 'success');
+                });
+            }
+
+            function deleteNote(noteId) {
+                showConfirmationModal('Are you sure you want to delete this note?', () => {
+                    currentNotes = currentNotes.filter(note => note.id !== noteId);
+                    saveNotes(selectedYearMonth, currentNotes);
+                    updateNotesList();
+                    showNotification('Note deleted!', 'success');
+                });
+            }
+            
+            async function scanReceiptImage(file) {
+                 if (!file) { showNotification('No image file provided.', 'error'); return; }
+                 if (!selectedYearMonth) { showNotification('Please select a month before scanning.', 'error'); return; }
+
+                 scanLoader.classList.remove('hidden');
+                 scanResult.innerHTML = '';
+                 scanError.classList.add('hidden');
+                 imagePreview.src = URL.createObjectURL(file);
+                 imagePreviewContainer.classList.remove('hidden');
+
+                 try {
+                     const imagePart = await fileToGenerativePart(file);
+                     const prompt = {
+                         parts: [
+                             { text: `Analyze this receipt or bill. Extract a list of items with their name, amount, and category. The valid categories are: ${CATEGORIES.join(', ')}. Assign the most appropriate category. Also extract the date in YYYY-MM-DD format. If no date is found, use today's date, which is ${new Date().toISOString().split('T')[0]}. Return a single, valid JSON object with the structure: {"date": "YYYY-MM-DD", "items": [{"name": "string", "amount": number, "category": "string"}]}`},
+                             imagePart
+                         ]
+                     };
+
+                     const responseText = await callGemini('gemini-1.5-flash-latest', prompt);
+                     const data = JSON.parse(responseText);
+
+                     if (!data.items || data.items.length === 0) {
+                         showNotification('AI could not find any items on the receipt.', 'info');
+                         scanResult.innerHTML = `<p class="text-amber-700 text-center font-semibold">No items found.</p>`;
+                         return;
+                     }
+                     let addedCount = 0;
+                     data.items.forEach(item => {
+                         const expense = {
+                             id: crypto.randomUUID(),
+                             name: item.name.trim(),
+                             amount: parseFloat(item.amount),
+                             category: item.category,
+                             dueDate: `${data.date || new Date().toISOString().split('T')[0]}T12:00`,
+                             paid: false,
+                             createdAt: new Date().toISOString()
+                         };
+                         if (expense.name && !isNaN(expense.amount) && expense.amount > 0 && CATEGORIES.includes(expense.category)) {
+                             currentExpenses.push(expense);
+                             addedCount++;
+                         }
+                     });
+                     
+                     if (addedCount > 0) {
+                         saveExpenses(selectedYearMonth, currentExpenses);
+                         updateAllDisplays();
+                         showNotification(`${addedCount} expense(s) were added!`, 'success');
+                         scanResult.innerHTML = `<p class="text-green-700 text-center font-semibold">Success! ${addedCount} expenses added.</p>`;
+                     } else {
+                        showNotification('No valid expenses could be added from the receipt.', 'warning');
+                        scanResult.innerHTML = `<p class="text-amber-700 text-center font-semibold">No valid items found.</p>`;
+                     }
+
+                 } catch (error) {
+                     scanError.textContent = `Error: ${error.message}`;
+                     scanError.classList.remove('hidden');
+                 } finally {
+                     scanLoader.classList.add('hidden');
+                     receiptUploader.value = '';
+                 }
+            }
+
+            function fileToGenerativePart(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve({ inlineData: { data: reader.result.split(',')[1], mimeType: file.type } });
+                    reader.onerror = err => reject(err);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            async function callGemini(model, prompt) {
                 const response = await fetch('/api/call-gemini', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                     body: JSON.stringify({ model, prompt }),
                 });
 
+                const result = await response.json();
+
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to get financial report from AI.');
+                    throw new Error(result.error || `API request failed with status ${response.status}`);
+                }
+                
+                return result.text;
+            }
+            
+            function openCategoryLimitsModal() {
+                categoryLimitsFormContainer.innerHTML = '';
+                CATEGORIES.forEach(cat => {
+                    const limit = currentCategoryLimits[cat] || '';
+                    const spentSoFar = currentExpenses.filter(e => e.paid && e.category === cat).reduce((sum, e) => sum + e.amount, 0);
+                    const html = `
+                        <div class="flex items-center gap-4">
+                            <label class="w-1/3 font-semibold text-gray-700">${cat}</label>
+                            <input type="number" data-category="${cat}" value="${limit}" placeholder="No limit" class="input-style w-1/3">
+                            <span class="text-sm text-gray-500 w-1/3">Spent: ${formatCurrency(spentSoFar)}</span>
+                        </div>`;
+                    categoryLimitsFormContainer.insertAdjacentHTML('beforeend', html);
+                });
+                categoryLimitsModal.classList.remove('hidden');
+            }
+
+            function stopCameraStream() {
+                if (cameraFeed.srcObject) {
+                    cameraFeed.srcObject.getTracks().forEach(track => track.stop());
+                    cameraFeed.srcObject = null;
+                }
+            }
+            
+            document.addEventListener('DOMContentLoaded', function() {
+                populateTimeDropdowns();
+                populateCategoryDropdown();
+                // We let the auth state change handle the initial view
+            });
+
+            monthFoldersList.addEventListener('click', (e) => {
+                const folderCard = e.target.closest('.month-folder');
+                if (!folderCard) return;
+                const yearMonth = folderCard.dataset.yearMonth;
+                if (e.target.closest('.delete-month-btn')) {
+                    deleteMonthData(yearMonth);
+                } else {
+                    selectedYearMonth = yearMonth;
+                    monthSelector.value = yearMonth;
+                    monthsScreen.classList.add('hidden');
+                    appScreen.classList.remove('hidden');
+                    if (!expenseChart) initializeChart();
+                    loadMonthData(yearMonth);
+                }
+            });
+
+            jumpToMonthForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const yearMonth = this.querySelector('input[type="month"]').value;
+                if (yearMonth) {
+                    selectedYearMonth = yearMonth;
+                    monthSelector.value = yearMonth;
+                    monthsScreen.classList.add('hidden');
+                    appScreen.classList.remove('hidden');
+                    if (!expenseChart) initializeChart();
+                    loadMonthData(yearMonth);
+                }
+            });
+
+            backToMonthsBtn.addEventListener('click', () => {
+                appScreen.classList.add('hidden');
+                monthsScreen.classList.remove('hidden');
+                renderMonthFolders();
+            });
+            
+            monthSelector.addEventListener('change', function() {
+                selectedYearMonth = this.value;
+                loadMonthData(selectedYearMonth);
+            });
+            
+            budgetForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const name = budgetNameInput.value.trim();
+                const amount = parseFloat(budgetAmountInput.value);
+                const type = budgetTypeSelect.value;
+
+                if (!name || isNaN(amount) || amount <= 0) {
+                    showNotification('Please enter a valid name and positive amount.', 'error');
+                    return;
+                }
+                
+                const newBudgetEntry = { id: crypto.randomUUID(), name, amount, type };
+                currentBudgets.push(newBudgetEntry);
+                saveBudgets(selectedYearMonth, currentBudgets);
+                showNotification('Budget entry added!', 'success');
+                
+                updateAllDisplays();
+                budgetForm.reset();
+            });
+
+            expenseForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const dateValue = expenseDateInput.value;
+                let hourValue = parseInt(expenseHourInput.value);
+                const minuteValue = expenseMinuteInput.value;
+                const ampmValue = expenseAmpmInput.value;
+                const name = expenseNameInput.value.trim();
+                const amount = parseFloat(expenseAmountInput.value);
+                const category = expenseCategorySelect.value;
+                
+                if (!name || isNaN(amount) || amount <= 0 || !dateValue) {
+                    showNotification('Please fill all expense fields correctly.', 'error');
+                    return;
+                }
+                
+                if (ampmValue === 'PM' && hourValue !== 12) {
+                    hourValue += 12;
+                }
+                if (ampmValue === 'AM' && hourValue === 12) {
+                    hourValue = 0;
+                }
+                const formattedHour = hourValue.toString().padStart(2, '0');
+                const combinedDateTime = `${dateValue}T${formattedHour}:${minuteValue}`;
+
+                const categoryLimit = currentCategoryLimits[category];
+                const spentSoFar = currentExpenses.filter(exp => exp.paid && exp.category === category).reduce((sum, exp) => sum + exp.amount, 0);
+                if (categoryLimit && (spentSoFar + amount > categoryLimit)) {
+                    showNotification(`Warning: This expense will exceed your limit for ${category}!`, 'warning');
+                }
+                
+                const expense = {
+                    id: crypto.randomUUID(), name, amount, category,
+                    dueDate: combinedDateTime,
+                    paid: false, createdAt: new Date().toISOString()
+                };
+                const expenseYearMonth = expense.dueDate.slice(0, 7);
+                
+                if (expenseYearMonth === selectedYearMonth) {
+                    currentExpenses.push(expense);
+                    saveExpenses(selectedYearMonth, currentExpenses);
+                    updateAllDisplays();
+                    showNotification(`Expense "${expense.name}" saved!`, 'success');
+                } else {
+                    let otherMonthExpenses = loadExpenses(expenseYearMonth);
+                    otherMonthExpenses.push(expense);
+                    saveExpenses(expenseYearMonth, otherMonthExpenses);
+                    const monthName = new Date(expenseYearMonth + '-02').toLocaleString('default', { month: 'long', year: 'numeric' });
+                    
+                    showSwitchMonthModal(`Expense "${expense.name}" was saved to ${monthName}. Do you want to switch to that month now?`, () => {
+                         selectedYearMonth = expenseYearMonth;
+                         monthSelector.value = expenseYearMonth;
+                         loadMonthData(expenseYearMonth);
+                    });
+                }
+                expenseForm.reset();
+            });
+
+            notesForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const noteText = noteInput.value.trim();
+                if (noteText) {
+                    currentNotes.unshift({ id: crypto.randomUUID(), text: noteText, createdAt: new Date().toISOString() });
+                    saveNotes(selectedYearMonth, currentNotes);
+                    updateNotesList();
+                    noteInput.value = '';
+                    showNotification('Note added!', 'success');
+                } else showNotification('Note cannot be empty.', 'error');
+            });
+
+            setCategoryLimitsBtn.addEventListener('click', openCategoryLimitsModal);
+            closeLimitsModalBtn.addEventListener('click', () => categoryLimitsModal.classList.add('hidden'));
+            saveLimitsBtn.addEventListener('click', () => {
+                const newLimits = {};
+                categoryLimitsFormContainer.querySelectorAll('input').forEach(input => {
+                    const cat = input.dataset.category;
+                    const val = parseFloat(input.value);
+                    if (!isNaN(val) && val > 0) newLimits[cat] = val;
+                });
+                currentCategoryLimits = newLimits;
+                saveCategoryLimits(selectedYearMonth, currentCategoryLimits);
+                categoryLimitsModal.classList.add('hidden');
+                showNotification('Category limits saved!', 'success');
+                updateLimitExceededDisplay();
+            });
+
+            receiptUploader.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    scanReceiptImage(file);
+                }
+            });
+
+            analyzeButton.addEventListener('click', async () => {
+                const paidExpenses = currentExpenses.filter(exp => exp.paid);
+                if (paidExpenses.length === 0) {
+                    showNotification('You have no paid expenses to analyze.', 'warning');
+                    return;
+                }
+                
+                analyzeButton.disabled = true;
+                analyzeLoader.classList.remove('hidden');
+                analysisResult.classList.add('hidden');
+                analyzeError.classList.add('hidden');
+
+                try {
+                    const systemPrompt = `You are a helpful and friendly financial advisor for a user in India (currency is INR). Analyze the user's monthly financial data. Your goal is to provide a detailed, holistic, and actionable analysis.
+                    1.  **Review Expenses:** Look for patterns or high spending in non-essential categories like 'Restaurant', 'Cafe or Stall', 'Shopping', 'Entertainment'.
+                    2.  **Check Limits:** Compare spending against the user's set 'categoryLimits'. Explicitly point out categories that are over budget.
+                    3.  **Read Notes:** Review the user's 'notes' to understand their goals. Connect your advice to these notes (e.g., "I see you're saving for a trip, let's look at how your spending on 'Restaurant' impacts that goal...").
+                    4.  **Synthesize:** Combine everything into a cohesive analysis. Address the user directly. Provide specific, actionable tips. Format your response with clear headings (e.g., **Spending Habits**, **Budget Check**, **Final Advice**) using markdown for bolding.`;
+                    
+                    const prompt = { parts: [{ text: `${systemPrompt}\n\nHere is the user's data:\n
+                    **Paid Expenses:**\n${JSON.stringify(paidExpenses, null, 2)}\n\n
+                    **Category Limits:**\n${JSON.stringify(currentCategoryLimits, null, 2)}\n\n
+                    **User Notes:**\n${JSON.stringify(currentNotes, null, 2)}` 
+                    }] };
+                    let responseText = await callGemini('gemini-pro', prompt);
+                    
+                    responseText = responseText.replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-900">$1</strong>');
+                    responseText = responseText.replace(/\n/g, '<br>');
+
+                    analysisResult.innerHTML = `<div class="flex items-center gap-2 mb-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-800"><path d="M12 2a10 10 0 1 0 10 10c0-2-1-4-3-5.5s-4.5-3-5.5-3Z"/><path d="m14 12-2 2-2-2"/></svg><p class="font-bold text-lg text-amber-900">AI Financial Insights</p></div><p class="text-gray-700">${responseText}</p>`;
+                    analysisResult.classList.remove('hidden');
+                } catch (error) {
+                    analyzeError.textContent = `Error: ${error.message}`;
+                    analyzeError.classList.remove('hidden');
+                } finally {
+                    analyzeButton.disabled = false;
+                    analyzeLoader.classList.add('hidden');
+                }
+            });
+
+            openCameraButton.addEventListener('click', async () => {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showNotification('Camera access is not supported by your browser.', 'error');
+                    return;
                 }
 
-                const result = await response.json();
-                
-                // 4. Render the HTML response
-                financialReportResponseEl.className = '';
-                financialReportResponseEl.innerHTML = result.text; // AI generates the HTML
-
-            } catch (error) {
-                console.error('AI Report Error:', error);
-                financialReportResponseEl.className = 'error';
-                financialReportResponseEl.innerHTML = `<strong>Error:</strong> ${error.message}`;
-            } finally {
-                event.target.disabled = false;
-            }
-        }
-
-        function buildFinancialSummary() {
-            // Helper function to create a text summary of all app data
-            
-            // Summarize spending by category
-            const spendingByCategory = {};
-            transactions.filter(t => t.type === 'Expense').forEach(t => {
-                spendingByCategory[t.category] = (spendingByCategory[t.category] || 0) + t.amount;
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    cameraFeed.srcObject = stream;
+                    cameraModal.classList.remove('hidden');
+                } catch (error) {
+                    console.error("Error accessing camera:", error);
+                    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                        showNotification('Camera permission was denied. Please enable it in browser settings.', 'error');
+                    } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                        showNotification('No camera was found on this device.', 'error');
+                    } else {
+                        showNotification('Could not access the camera.', 'error');
+                    }
+                }
             });
-            const spendingSummary = Object.keys(spendingByCategory)
-                .map(cat => `- ${cat}: $${spendingByCategory[cat].toFixed(2)}`)
-                .join('\n');
 
-            const totalIncome = transactions
-                .filter(t => t.type === 'Income')
-                .reduce((acc, t) => acc + t.amount, 0);
+            closeCameraModalBtn.addEventListener('click', () => {
+                stopCameraStream();
+                cameraModal.classList.add('hidden');
+            });
 
-            const totalExpenses = transactions
-                .filter(t => t.type === 'Expense')
-                .reduce((acc, t) => acc + t.amount, 0);
-
-            return `
-                CURRENT STATE:
-                - Total Budget (Cash on Hand): $${totalBudget.toFixed(2)}
-                - Total Income (this period): $${totalIncome.toFixed(2)}
-                - Total Paid Expenses (this period): $${totalExpenses.toFixed(2)}
-
-                MY SPENDING HABITS (Paid Expenses):
-                ${spendingSummary || "- No expenses paid yet."}
-
-                MY BUDGET LIMITS:
-                ${categoryBudgets.map(b => `- ${b.category} Limit: $${b.amount.toFixed(2)}`).join('\n') || "- No category budgets set."}
-
-                MY UPCOMING PAYMENTS (Unpaid Expenses):
-                ${plannedExpenses.map(p => `- ${p.name} (Category: ${p.category}) for $${p.amount.toFixed(2)} due on ${p.date}`).join('\n') || "- No unpaid expenses."}
+            captureBtn.addEventListener('click', () => {
+                const context = captureCanvas.getContext('2d');
+                captureCanvas.width = cameraFeed.videoWidth;
+                captureCanvas.height = cameraFeed.videoHeight;
+                context.drawImage(cameraFeed, 0, 0, cameraFeed.videoWidth, cameraFeed.videoHeight);
                 
-                MY RECURRING EXPENSE TEMPLATES:
-                ${recurringExpenses.map(r => `- ${r.name} (Category: ${r.category}) for $${r.amount.toFixed(2)} due on day ${r.day}`).join('\n') || "- No recurring expense templates."}
-            `;
-        }
+                stopCameraStream();
+                cameraModal.classList.add('hidden');
+                
+                captureCanvas.toBlob(blob => {
+                    if (blob) {
+                        const file = new File([blob], "receipt-capture.jpg", { type: 'image/jpeg' });
+                        scanReceiptImage(file);
+                    }
+                }, 'image/jpeg');
+            });
 
-
-        // --- LOCAL STORAGE ---
-        function saveState() {
-            const state = {
-                totalBudget,
-                transactions,
-                plannedExpenses,
-                categoryBudgets,
-                recurringExpenses
-            };
-            localStorage.setItem('spendCountState', JSON.stringify(state));
-        }
-
-        function loadState() {
-            const state = JSON.parse(localStorage.getItem('spendCountState'));
-            if (state) {
-                totalBudget = state.totalBudget || 0;
-                transactions = state.transactions || [];
-                plannedExpenses = state.plannedExpenses || [];
-                categoryBudgets = state.categoryBudgets || [];
-                recurringExpenses = state.recurringExpenses || [];
-            }
-            openTab({ currentTarget: document.querySelector('.tab-link.active') }, 'dashboard');
-            toggleCategory();
-            updateUI(); 
-        }
+            window.markExpenseAsPaid = markExpenseAsPaid;
+            window.deleteExpense = deleteExpense;
+            window.deleteNote = deleteNote;
+            window.deleteBudget = deleteBudget;
+            
+        })();
     </script>
 </body>
 </html>
